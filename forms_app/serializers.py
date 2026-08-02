@@ -1,56 +1,48 @@
 from rest_framework import serializers
-from .models import (
-    Form,
-    FormVersion,
-    Field,
-    FieldOption,
-    ConditionalRule,
-    Submission,
-    ResponseValue,
-)
+from .models import Form, Field
+from .models import ConditionalRule
 
-
-class FieldOptionSerializer(serializers.ModelSerializer):
+class FormSerializer(serializers.ModelSerializer):
     class Meta:
-        model = FieldOption
-        fields = '__all__'
+        model = Form
+        fields = "__all__"
 
 
 class FieldSerializer(serializers.ModelSerializer):
-    options = FieldOptionSerializer(many=True, read_only=True)
-
     class Meta:
         model = Field
-        fields = '__all__'
-
-
-class FormSerializer(serializers.ModelSerializer):
-    fields = FieldSerializer(many=True, read_only=True)
-
-    class Meta:
-        model = Form
-        fields = '__all__'
-
-
-class FormVersionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = FormVersion
-        fields = '__all__'
-
-
-class ConditionalRuleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ConditionalRule
-        fields = '__all__'
-
-
-class SubmissionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Submission
-        fields = '__all__'
-
+        fields = "__all__"
+from .models import Submission, ResponseValue
 
 class ResponseValueSerializer(serializers.ModelSerializer):
     class Meta:
         model = ResponseValue
-        fields = '__all__'
+        fields = "__all__"
+        read_only_fields = ["submission"]
+
+
+class SubmissionSerializer(serializers.ModelSerializer):
+    responses = ResponseValueSerializer(many=True, write_only=True)
+
+    class Meta:
+        model = Submission
+        fields = ["id", "form_version", "submitted_at", "ip_address", "status", "responses"]
+        read_only_fields = ["submitted_at"]
+
+    def create(self, validated_data):
+        responses = validated_data.pop("responses")
+
+        submission = Submission.objects.create(**validated_data)
+
+        for response in responses:
+            ResponseValue.objects.create(
+                submission=submission,
+                field=response["field"],
+                value=response["value"]
+            )
+
+        return submission
+class ConditionalRuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConditionalRule
+        fields = "__all__"

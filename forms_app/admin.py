@@ -1,4 +1,19 @@
 from django.contrib import admin
+from .models import Form, FormVersion, Field, FieldOption
+
+admin.site.register(Form)
+admin.site.register(FormVersion)
+admin.site.register(Field)
+admin.site.register(FieldOption)
+from .models import (
+    Form,
+    FormVersion,
+    Field,
+    FieldOption,
+    ConditionalRule
+)
+
+admin.site.register(ConditionalRule)
 from .models import (
     Form,
     FormVersion,
@@ -9,10 +24,5 @@ from .models import (
     ResponseValue,
 )
 
-admin.site.register(Form)
-admin.site.register(FormVersion)
-admin.site.register(Field)
-admin.site.register(FieldOption)
-admin.site.register(ConditionalRule)
 admin.site.register(Submission)
 admin.site.register(ResponseValue)
