@@ -72,31 +72,24 @@ class FormViewSet(viewsets.ModelViewSet):
             FormSerializer(form).data,
             status=status.HTTP_201_CREATED,
         )
-
     def update(self, request, *args, **kwargs):
+        print(request.data)
         form = self.get_object()
 
-        if form.status == "published":
+        data = request.data
 
-            latest_version = (
-                FormVersion.objects.filter(form=form)
-                .order_by("-version")
-                .first()
-            )
+        form.title = data.get("title", form.title)
+        form.description = data.get("description", form.description)
+        form.Fields = data.get("Fields", form.Fields)
 
-            new_version = FormVersion.objects.create(
-                form=form,
-                version=latest_version.version + 1,
-                is_published=False,
-            )
+        form.save()
 
-            return Response(
-                {
-                    "message": "New Draft Version Created",
-                    "version": new_version.version,
-                },
-                status=status.HTTP_201_CREATED,
-            )
+        return Response(
+            FormSerializer(form).data,
+            status=status.HTTP_200_OK,
+        )
+
+    
 
         return super().update(request, *args, **kwargs)
     @action(detail=True, methods=["post"])
@@ -117,29 +110,24 @@ class FormViewSet(viewsets.ModelViewSet):
         )
 
         # Copy fields
-        old_fields = Field.objects.filter(
-            form_version__form=form
-        ).order_by("field_order")
+        for index, item in enumerate(form.Fields, start=1):
 
-        for field in old_fields:
             new_field = Field.objects.create(
                 form_version=new_version,
-                label=field.label,
-                field_type=field.field_type,
-                placeholder=field.placeholder,
-                is_required=field.is_required,
-                field_order=field.field_order,
+                label=item["label"],
+                field_type=item["type"].lower(),
+                placeholder=item.get("placeholder", ""),
+                is_required=item.get("required", False),
+                field_order=index,
             )
 
-            options = FieldOption.objects.filter(field=field)
-
-            for option in options:
-                FieldOption.objects.create(
-                    field=new_field,
-                    option_text=option.option_text,
-                    option_order=option.option_order,
-                )
-
+            if item["type"] == "Dropdown":
+                for i, option in enumerate(item.get("options", []), start=1):
+                    FieldOption.objects.create(
+                        field=new_field,
+                        option_text=option,
+                        option_order=i,
+                    )
         return Response({"message": "Form published successfully"})
     @action(detail=True, methods=["post"])
     def archive(self, request, pk=None):

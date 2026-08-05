@@ -12,6 +12,7 @@ import {
   Pencil,
   Trash2,
   RotateCcw,
+  Send,
 } from "lucide-react";
 function Dashboard() {
   const [forms, setForms] = useState([]);
@@ -104,6 +105,24 @@ const logout = () => {
     } catch (err) {
       console.log(err);
       alert("Archive Failed");
+    }
+  };
+  const publishForm = async (id) => {
+    try {
+      await api.post(`forms/${id}/publish/`);
+  
+      setForms(
+        forms.map((form) =>
+          form.id === id
+            ? { ...form, status: "published" }
+            : form
+        )
+      );
+  
+      alert("Form Published Successfully!");
+    } catch (err) {
+      console.log(err);
+      alert("Publish Failed");
     }
   };
 
@@ -250,6 +269,29 @@ alert("Link Copied");
 </button>
     </>
   )}
+  {form.status === "draft" && (
+  <>
+    <Link to={`/edit/${form.id}`}>
+      <button className="edit-btn">
+        <Pencil size={16} />
+      </button>
+    </Link>
+
+    <button
+      className="publish-btn"
+      onClick={() => publishForm(form.id)}
+    >
+      <Send size={16} />
+    </button>
+
+    <button
+      className="delete-btn"
+      onClick={() => deleteForm(form.id)}
+    >
+      <Trash2 size={16} />
+    </button>
+  </>
+)}
 
   {form.status === "archived" && (
     <>
