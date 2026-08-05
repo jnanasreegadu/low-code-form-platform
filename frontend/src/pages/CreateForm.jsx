@@ -149,6 +149,25 @@ function CreateForm() {
       alert("Failed to Publish Form");
     }
   };
+  const saveDraft = async () => {
+    try {
+      const data = {
+        title,
+        description,
+        fields,
+        status: "draft",
+      };
+  
+      await api.post("forms/", data);
+  
+      alert("Draft Saved Successfully!");
+  
+      navigate("/");
+    } catch (error) {
+      console.error(error);
+      alert("Failed to Save Draft");
+    }
+  };
   const toggleRequired = (id) => {
     const updatedFields = fields.map((field) =>
       field.id === id
@@ -202,10 +221,13 @@ function CreateForm() {
 </button>
 
         <div className="nav-actions">
-          <button className="draft-btn">
-            <Save size={18} />
-            Save Draft
-          </button>
+        <button
+  className="draft-btn"
+  onClick={saveDraft}
+>
+  <Save size={18} />
+  Save Draft
+</button>
 
           <button
   className="publish-btn"
