@@ -38,17 +38,13 @@ function FieldSettings({
         <label>Placeholder</label>
   
         <input
-          type="text"
-          value={selectedField.placeholder || ""}
-          onChange={(e) => {
-            console.log(e.target.value);
-            updateOptions(
-              selectedField.id,
-              index,
-              e.target.value
-            );
-          }}
-        />
+  type="text"
+  value={selectedField.placeholder || ""}
+  onClick={(e) => e.stopPropagation()}
+  onChange={(e) =>
+    updatePlaceholder(selectedField.id, e.target.value)
+  }
+/>
   
         <label className="settings-checkbox">
   
