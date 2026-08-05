@@ -1,0 +1,88 @@
+.view-page{
+    min-height:100vh;
+    padding:40px;
+    background:radial-gradient(circle at top,#16384d,#09090b 65%);
+    color:white;
+}
+
+.view-title{
+    text-align:center;
+    font-size:42px;
+    color:#4fd1ff;
+    margin-bottom:10px;
+}
+
+.view-description{
+    text-align:center;
+    color:#9ca3af;
+    margin-bottom:40px;
+}
+
+.view-heading{
+    margin-bottom:20px;
+    color:#4fd1ff;
+}
+
+.view-field{
+    background:rgba(255,255,255,.05);
+    backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:18px;
+    padding:22px;
+    margin-bottom:20px;
+    transition:.3s;
+}
+
+.view-field:hover{
+    border-color:#4fd1ff;
+    box-shadow:0 10px 30px rgba(79,209,255,.15);
+}
+
+.view-field label{
+    display:block;
+    margin-bottom:12px;
+    font-size:16px;
+    font-weight:600;
+    color:white;
+}
+
+.view-input{
+    width:100%;
+    height:48px;
+    border:none;
+    outline:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.08);
+    color:white;
+    padding:0 15px;
+}
+
+.view-select{
+    width:100%;
+    height:48px;
+    border:none;
+    outline:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.08);
+    color:white;
+    padding:0 15px;
+}
+
+.view-checkbox{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    font-size:16px;
+}
+.view-field label{
+    display:block;
+    text-align:left;
+    margin-bottom:10px;
+    color:#fff;
+    font-weight:600;
+}
+.view-input,
+.view-select{
+    height:52px;
+    border-radius:12px;
+}
