@@ -7,6 +7,7 @@ import DashboardPieChart from "../components/DashboardPieChart";
 import { motion } from "framer-motion";
 import { Archive } from "lucide-react";
 import { Share2 } from "lucide-react";
+import Loader from "../components/Loader";
 import {
   Eye,
   Pencil,
@@ -17,32 +18,32 @@ import {
 function Dashboard() {
   const [forms, setForms] = useState([]);
 
+  const [responseCount, setResponseCount] = useState(0);
+
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   useEffect(() => {
-    api
-      .get("forms/")
-      .then((response) => {
-        setForms(response.data);
-      })
-      .catch((error) => {
-        console.error("Error fetching forms:", error);
-      });
-  
-    api
-      .get("submissions/count/")
-      .then((response) => {
-        console.log(response.data);
-        setResponseCount(response.data.count);
-      })
-      .catch((err) => {
-        console.log(err);
-      });
-  }, []);
-  
+
+    Promise.all([
+        api.get("forms/"),
+        api.get("submissions/count/")
+    ])
+    .then(([formsRes, submissionRes])=>{
+        setForms(formsRes.data);
+        setResponseCount(submissionRes.data.count);
+    })
+    .catch(console.log)
+    .finally(()=>{
+        setLoading(false);
+    });
+  },[]);
+  if(loading){
+    return <Loader/>
+  }
   const publishedForms = forms.filter(
     (form) => form.status === "published"
   ).length;
-  const [responseCount, setResponseCount] = useState(0);
-  const navigate = useNavigate();
+
 
 const logout = () => {
   localStorage.removeItem("token");
