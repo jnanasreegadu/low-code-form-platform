@@ -5,7 +5,7 @@ import "../styles/PublicForm.css";
 
 function PublicForm() {
 
-    const { id } = useParams();
+    const { uuid } = useParams();
 
     const [form,setForm]=useState(null);
     const [responses, setResponses] = useState({});
@@ -25,7 +25,7 @@ function PublicForm() {
         };
       
         try {
-          await api.post(`forms/${id}/submit/`, payload);
+          await api.post(`forms/${uuid}/submit/`, payload);
           alert("Form Submitted Successfully");
         } catch (err) {
           console.log(err);
@@ -33,13 +33,16 @@ function PublicForm() {
         }
       };
 
-    useEffect(() => {
-        api.get(`forms/${id}/public/`)
+      useEffect(() => {
+        api.get(`public/${uuid}/`)
           .then((res) => {
             console.log(res.data);
             setForm(res.data);
+          })
+          .catch((err) => {
+            console.log(err);
           });
-      }, []);
+    }, [uuid]);
 
     if(!form)
         return <h2>Loading...</h2>

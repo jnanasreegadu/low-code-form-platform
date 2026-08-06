@@ -19,7 +19,7 @@ function App() {
         <Route path="/edit/:id" element={ <ProtectedRoute><EditForm /></ProtectedRoute>} />
         <Route path="/login" element={<Login/>}/>
         <Route
-  path="/form/:id"
+  path="/form/:uuid"
   element={<PublicForm />}
 />
         <Route

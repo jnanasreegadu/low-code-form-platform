@@ -210,8 +210,11 @@ const logout = () => {
             <thead>
               <tr>
                 <th>Form Name</th>
+                <th>Version</th>
                 <th>Status</th>
                 <th>Action</th>
+                
+                              
               </tr>
             </thead>
 
@@ -220,11 +223,15 @@ const logout = () => {
                 <tr key={form.id}>
                   <td>{form.title}</td>
 
-                  <td>
-                    <span className={`status ${form.status}`}>
-                      {form.status}
-                    </span>
-                  </td>
+                <td>
+                  V{form.latest_version}
+                </td>
+
+                <td>
+                  <span className={`status ${form.status}`}>
+                    {form.status}
+                  </span>
+                </td>
                   <td className="action-buttons">
 
   <Link to={`/view/${form.id}`}>
@@ -256,9 +263,9 @@ const logout = () => {
     <button
 className="action-btn"
 onClick={()=>{
-navigator.clipboard.writeText(
-`${window.location.origin}/form/${form.id}`
-);
+  navigator.clipboard.writeText(
+    `${window.location.origin}/form/${form.latest_uuid}`
+    );
 
 alert("Link Copied");
 }}

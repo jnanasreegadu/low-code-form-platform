@@ -1,4 +1,5 @@
 from django.db import models
+import uuid
 
 # Create your models here.
 class Form(models.Model):
@@ -22,8 +23,18 @@ class Form(models.Model):
         return self.title
 class FormVersion(models.Model):
     form = models.ForeignKey(Form, on_delete=models.CASCADE)
+
     version = models.IntegerField(default=1)
+
+    uuid = models.UUIDField(
+        default=uuid.uuid4,
+        editable=False,
+        unique=True
+
+    )
+
     is_published = models.BooleanField(default=False)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

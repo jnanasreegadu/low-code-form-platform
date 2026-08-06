@@ -1,6 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework.decorators import action,api_view
+from django.shortcuts import get_object_or_404
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework.authtoken.models import Token
@@ -72,29 +73,81 @@ class FormViewSet(viewsets.ModelViewSet):
             FormSerializer(form).data,
             status=status.HTTP_201_CREATED,
         )
+        
     def update(self, request, *args, **kwargs):
-        print(request.data)
+        print("UPDATE API HIT")
+
         form = self.get_object()
+        print("FORM ID:", form.id)
+        print("STATUS BEFORE:", form.status)
 
         data = request.data
 
         form.title = data.get("title", form.title)
         form.description = data.get("description", form.description)
         form.Fields = data.get("Fields", form.Fields)
-
         form.save()
+
+        print("STATUS AFTER:", form.status)
+
+        if form.status == "published":
+            print("ENTERED VERSION BLOCK")
+
+            # Old published version ni unpublished cheyyi
+            FormVersion.objects.filter(
+                form=form,
+                is_published=True
+            ).update(is_published=False)
+
+            # Next version number
+            version_no = (
+                FormVersion.objects.filter(form=form).count() + 1
+            )
+
+            # Create new version
+            new_version = FormVersion.objects.create(
+                form=form,
+                version=version_no,
+                is_published=True,
+            )
+
+            # Save latest fields into new version
+            for index, item in enumerate(data.get("Fields", []), start=1):
+
+                new_field = Field.objects.create(
+                    form_version=new_version,
+                    label=item["label"],
+                    field_type=item["type"].lower(),
+                    placeholder=item.get("placeholder", ""),
+                    is_required=item.get("required", False),
+                    field_order=index,
+                )
+
+                if item["type"] == "Dropdown":
+                    for i, option in enumerate(
+                        item.get("options", []),
+                        start=1,
+                    ):
+                        FieldOption.objects.create(
+                            field=new_field,
+                            option_text=option,
+                            option_order=i,
+                        )
 
         return Response(
             FormSerializer(form).data,
             status=status.HTTP_200_OK,
-        )
+            )
 
-    
 
-        return super().update(request, *args, **kwargs)
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
+
         form = self.get_object()
+        FormVersion.objects.filter(
+            form=form,
+            is_published=True
+        ).update(is_published=False)
 
         # Publish form
         form.status = "published"
@@ -327,6 +380,41 @@ class SubmissionViewSet(viewsets.ModelViewSet):
 class ConditionalRuleViewSet(viewsets.ModelViewSet):
     queryset = ConditionalRule.objects.all()
     serializer_class = ConditionalRuleSerializer
+
+@api_view(["GET"])
+def public_form_by_uuid(request, uuid):
+
+    version = get_object_or_404(
+        FormVersion,
+        uuid=uuid
+    )
+
+    fields = Field.objects.filter(
+        form_version=version
+    ).order_by("field_order")
+
+    data = {
+        "form_name": version.form.title,
+        "description": version.form.description,
+        "version": version.version,
+        "uuid": str(version.uuid),
+        "fields": [],
+    }
+
+    for field in fields:
+        data["fields"].append({
+            "id": field.id,
+            "label": field.label,
+            "field_type": field.field_type,
+            "placeholder": field.placeholder,
+            "required": field.is_required,
+            "options": [
+                option.option_text
+                for option in FieldOption.objects.filter(field=field)
+            ],
+        })
+
+    return Response(data)
 class LoginView(APIView):
     def post(self, request):
         username = request.data.get("username")

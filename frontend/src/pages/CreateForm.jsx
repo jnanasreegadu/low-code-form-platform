@@ -50,6 +50,12 @@ function CreateForm() {
       ? ["CSE", "ECE", "EEE", "CIVIL", "IT/DS", "AIML", "Others"]
       : [],
 
+      minLength: "",
+      maxLength: "",
+      minValue: "",
+      maxValue: "",
+      minDate: "",
+      maxDate: "",
     };
   
     setFields((prev) => [...prev, newField]);
@@ -126,6 +132,31 @@ function CreateForm() {
         updatedFields.find((field) => field.id === id)
       );
     }
+  };
+  const updateValidation = (id, key, value) => {
+
+    const updatedFields = fields.map((field)=>
+  
+      field.id===id
+  
+        ? { ...field, [key]: value }
+  
+        : field
+  
+    );
+  
+    setFields(updatedFields);
+  
+    if(selectedField?.id===id){
+  
+      setSelectedField(
+  
+        updatedFields.find(field=>field.id===id)
+  
+      );
+  
+    }
+  
   };
   const publishForm = async () => {
     try {
@@ -274,6 +305,7 @@ function CreateForm() {
   selectedField={selectedField}
   updateLabel={updateLabel}
   updatePlaceholder={updatePlaceholder}
+  updateValidation={updateValidation}
   toggleRequired={toggleRequired}
   deleteField={deleteField}
   updateOptions={updateOptions}

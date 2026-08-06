@@ -68,6 +68,12 @@ function EditForm() {
     type === "Dropdown"
       ? ["CSE", "ECE", "EEE", "CIVIL", "IT/DS", "AIML", "Others"]
       : [],
+      minLength: "",
+      maxLength: "",
+      minValue: "",
+      maxValue: "",
+      minDate: "",
+      maxDate: "",
     };
   
     setFields((prev) => [...prev, newField]);
