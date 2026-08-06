@@ -79,6 +79,10 @@ class ConditionalRule(models.Model):
         on_delete=models.CASCADE,
         related_name="source_rules"
     )
+    operator = models.CharField(
+        max_length=20,
+        default="equals"
+    )
     expected_value = models.CharField(max_length=255)
     target_field = models.ForeignKey(
         Field,
