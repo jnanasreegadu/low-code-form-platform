@@ -14,7 +14,8 @@
 
 .loader-gif{
     width:140px;
-    height:auto;
+    height:140px;
+    object-fit: contain;
 }
 
 .loader-overlay h1{
@@ -44,4 +45,10 @@
 .loader-overlay h1{
     color: #38bdf8;
     text-shadow: 0 0 12px rgba(56,189,248,.45);
+}
+
+h2{
+    color: aqua;
+
+    font-size: 35px;
 }

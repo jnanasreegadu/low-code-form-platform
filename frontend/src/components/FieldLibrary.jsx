@@ -5,6 +5,7 @@ import {
   ChevronDown,
   CheckSquare,
   Calendar,
+  Upload,
 } from "lucide-react";
 
 function FieldLibrary({ addField }) {
@@ -38,6 +39,11 @@ function FieldLibrary({ addField }) {
       icon: <Calendar size={22} />,
       name: "Date",
       description: "Pick a date",
+    },
+    {
+      icon: <Upload size={22} />,
+      name: "File Upload",
+      description: "Upload a file",
     },
   ];
 

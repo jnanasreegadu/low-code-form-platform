@@ -18,7 +18,22 @@ function CreateForm() {
 
     const newField = {
       id: Date.now(),
-      type,
+      type:
+        type === "Text"
+          ? "text"
+          : type === "Email"
+          ? "email"
+          : type === "Number"
+          ? "number"
+          : type === "Dropdown"
+          ? "Dropdown"
+          :type === "Checkbox"
+          ? "checkbox"
+          : type === "Date"
+          ? "Date"
+          : type === "File Upload"
+          ? "File"
+          : "text",
     
       label:
         type === "Text"
@@ -29,9 +44,13 @@ function CreateForm() {
           ? "Phone Number"
           : type === "Dropdown"
           ? "Department/Branch"
-          : type === "Checkbox"
+          :type === "Checkbox"
           ? "Accept Terms"
-          : "Date of Birth",
+          : type === "Date"
+          ? "Date of Birth"
+          : type === "File Upload"
+          ? "File Upload"
+          : "text",
   required: false,
   placeholder:
   type === "Text"

@@ -62,7 +62,19 @@ function Responses() {
                 {item.responses.map((res, index) => (
                   <tr key={index}>
                     <td>{res.field}</td>
-                    <td>{res.value}</td>
+                    <td>
+                      {res.file_url ? (
+                        <a
+                          href={res.file_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          {res.value}
+                        </a>
+                      ) : (
+                        res.value
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>

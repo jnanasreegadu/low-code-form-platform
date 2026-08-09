@@ -7,6 +7,8 @@ from .views import (
 )
 from .views import public_form_by_uuid
 from django.urls import path, include
+from django.conf import settings
+from django.conf.urls.static import static
 from .views import LoginView
 router = DefaultRouter()
 router.register(r'forms', FormViewSet)
@@ -18,3 +20,7 @@ urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("public/<uuid:uuid>/", public_form_by_uuid),
 ]
+urlpatterns += static(
+    settings.MEDIA_URL,
+    document_root=settings.MEDIA_ROOT
+)

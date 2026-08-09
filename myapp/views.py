@@ -8,6 +8,11 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework import status
 import csv
+import json
+from datetime import datetime
+from django.core.validators import validate_email
+from django.core.exceptions import ValidationError
+from django.core.files.uploadedfile import UploadedFile
 from django.http import HttpResponse
 from .models import (
     Form,
@@ -17,6 +22,7 @@ from .models import (
     Submission,
     ResponseValue,
     ConditionalRule,
+    UploadedFile,
 )
 
 
@@ -57,6 +63,10 @@ class FormViewSet(viewsets.ModelViewSet):
                 field_type=item["type"].lower(),
                 placeholder=item.get("placeholder", ""),
                 is_required=item.get("required", False),
+                min_length=item.get("min_length"),
+                max_length=item.get("max_length"),
+                min_value=item.get("min_value"),
+                max_value=item.get("max_value"),
                 field_order=index,
             )
 
@@ -120,6 +130,10 @@ class FormViewSet(viewsets.ModelViewSet):
                     field_type=item["type"].lower(),
                     placeholder=item.get("placeholder", ""),
                     is_required=item.get("required", False),
+                    min_length=item.get("min_length"),
+                    max_length=item.get("max_length"),
+                    min_value=item.get("min_value"),
+                    max_value=item.get("max_value"),
                     field_order=index,
                 )
 
@@ -171,6 +185,10 @@ class FormViewSet(viewsets.ModelViewSet):
                 field_type=item["type"].lower(),
                 placeholder=item.get("placeholder", ""),
                 is_required=item.get("required", False),
+                min_length=item.get("min_length"),
+                max_length=item.get("max_length"),
+                min_value=item.get("min_value"),
+                max_value=item.get("max_value"),
                 field_order=index,
             )
 
@@ -241,6 +259,11 @@ class FormViewSet(viewsets.ModelViewSet):
         "field_type": field.field_type,
         "placeholder": field.placeholder,
         "required": field.is_required,
+        "min_length": field.min_length,
+        "max_length": field.max_length,
+        "min_value": field.min_value,
+        "max_value": field.max_value,
+
         "options": [
             option.option_text
             for option in FieldOption.objects.filter(field=field)
@@ -272,7 +295,34 @@ class FormViewSet(viewsets.ModelViewSet):
             ip_address=request.META.get("REMOTE_ADDR"),
         )
 
+        
         responses = request.data.get("responses", [])
+        for item in responses:
+
+            field = Field.objects.get(id=item["field_id"])
+
+            value = str(item["value"]).strip()
+
+            # Required Validation
+            if field.is_required and value == "":
+                return Response(
+                    {
+                        "error": f"{field.label} is required"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Email Validation
+            if field.field_type == "email":
+                try:
+                    validate_email(value)
+                except ValidationError:
+                    return Response(
+                        {
+                            "error": f"Invalid email for {field.label}"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
 
         for item in responses:
             try:
@@ -313,7 +363,38 @@ class FieldViewSet(viewsets.ModelViewSet):
             {"message": "Field order updated successfully"},
             status=status.HTTP_200_OK
         )
+def evaluate_condition(rule, submitted_data):
+    """
+    Evaluate one conditional rule against submitted responses.
+    """
 
+    source_value = submitted_data.get(rule.source_field_id, "")
+
+    if source_value is None:
+        source_value = ""
+
+    source_value = str(source_value).strip()
+    expected_value = str(rule.expected_value).strip()
+
+    if rule.operator == "equals":
+        return source_value == expected_value
+
+    elif rule.operator == "not_equals":
+        return source_value != expected_value
+
+    elif rule.operator == "contains":
+        return expected_value.lower() in source_value.lower()
+
+    elif rule.operator == "is_empty":
+        return source_value == ""
+
+    elif rule.operator == "greater_than":
+        try:
+            return float(source_value) > float(expected_value)
+        except (ValueError, TypeError):
+            return False
+
+    return False
 class SubmissionViewSet(viewsets.ModelViewSet):
 
     queryset = Submission.objects.all()
@@ -337,9 +418,24 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             responses = []
 
             for response in response_values:
+
+                file_url = None
+
+                if response.field.field_type == "file":
+                    uploaded_file = UploadedFile.objects.filter(
+                        submission=submission,
+                        field=response.field
+                    ).first()
+
+                    if uploaded_file:
+                        file_url = request.build_absolute_uri(
+                            uploaded_file.file.url
+                        )
+
                 responses.append({
                     "field": response.field.label,
                     "value": response.value,
+                    "file_url": file_url,
                 })
 
             data.append({
@@ -377,6 +473,395 @@ class SubmissionViewSet(viewsets.ModelViewSet):
                 ])
 
         return response
+    @action(
+    detail=False,
+    methods=["post"],
+    url_path=r"(?P<uuid>[^/.]+)/submit"
+)
+    def submit(self, request, uuid=None):
+
+    # 1. Find published form version using UUID
+        try:
+            form_version = FormVersion.objects.get(
+                uuid=uuid,
+                is_published=True
+            )
+        except FormVersion.DoesNotExist:
+            return Response(
+                {"error": "Published form version not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # 2. Get submitted responses
+        responses = request.data.get("responses", [])
+        files = request.FILES
+
+        # Convert JSON string to Python list
+        if isinstance(responses, str):
+            responses = json.loads(responses)
+
+        # Convert submitted responses into dictionary
+        submitted_data = {
+            item.get("field_id"): item.get("value")
+            for item in responses
+        }
+
+        # 3. Load fields belonging to this form version
+        fields = Field.objects.filter(
+            form_version=form_version
+        )
+
+        # ==========================================================
+        # 4. CONDITIONAL LOGIC EVALUATOR
+        # ==========================================================
+
+        rules = ConditionalRule.objects.filter(
+            source_field__form_version=form_version,
+            target_field__form_version=form_version
+        )
+
+        hidden_fields = set()
+        required_fields = set()
+
+        for rule in rules:
+
+            condition_met = evaluate_condition(
+                rule,
+                submitted_data
+            )
+
+            if not condition_met:
+                continue
+
+            # HIDE rule
+            if rule.action == "hide":
+                hidden_fields.add(rule.target_field_id)
+
+            # REQUIRE rule
+            elif rule.action == "require":
+                required_fields.add(rule.target_field_id)
+
+        # ==========================================================
+        # 5. SERVER-SIDE VALIDATION
+        # ==========================================================
+
+        for field in fields:
+
+            value = submitted_data.get(
+                field.id,
+                ""
+            )
+            # ------------------------------------------------------
+            # File Upload Validation
+            # ------------------------------------------------------
+
+            if field.field_type == "file":
+
+                
+                uploaded_file = files.get(str(field.id))
+
+                if field.is_required and not uploaded_file:
+                    return Response(
+                        {
+                            "error": f"{field.label} is required"
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                if not uploaded_file:
+                    continue
+
+                # Maximum file size = 5 MB
+                max_size = 5 * 1024 * 1024
+
+                if uploaded_file.size > max_size:
+                    return Response(
+                        {
+                            "error": "File size must not exceed 5 MB."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Allowed file types
+                allowed_types = [
+                    "image/jpeg",
+                    "image/png",
+                    "application/pdf"
+                ]
+
+                if uploaded_file.content_type not in allowed_types:
+                    return Response(
+                        {
+                            "error": "Invalid file type. Please upload PDF, JPG or PNG."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            if value is None:
+                value = ""
+
+            value = str(value).strip()
+
+            # ------------------------------------------------------
+            # Hidden field validation
+            # ------------------------------------------------------
+
+            if field.id in hidden_fields:
+
+                if value != "":
+                    return Response(
+                        {
+                            "error": (
+                                f"{field.label} must not be submitted"
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                continue
+
+            # ------------------------------------------------------
+            # Required validation
+            # ------------------------------------------------------
+
+            is_required = (
+                field.is_required
+                or field.id in required_fields
+            )
+
+            if is_required and value == "":
+                return Response(
+                    {
+                        "error": f"{field.label} is required"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            # Optional empty field
+            if value == "":
+                continue
+            # ------------------------------------------------------
+            # Date validation
+            # ------------------------------------------------------
+
+            if field.field_type == "date":
+
+                try:
+                    datetime.strptime(value, "%Y-%m-%d")
+
+                except ValueError:
+                    return Response(
+                        {
+                            "error": "Invalid date. Please recheck."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            # ------------------------------------------------------
+            # String length validation
+            # ------------------------------------------------------
+
+            if field.field_type in ["text", "email"]:
+
+                if (
+                    field.min_length is not None
+                    and len(value) < field.min_length
+                ):
+                    return Response(
+                        {
+                            "error": (
+                                f"{field.label} must contain at least "
+                                f"{field.min_length} characters"
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                if (
+                    field.max_length is not None
+                    and len(value) > field.max_length
+                ):
+                    return Response(
+                        {
+                            "error": (
+                                f"{field.label} must contain at most "
+                                f"{field.max_length} characters"
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            # ------------------------------------------------------
+            # Email validation
+            # ------------------------------------------------------
+
+            if field.field_type == "email":
+
+                try:
+                    validate_email(value)
+
+                except ValidationError:
+                    return Response(
+                        {
+                            "error": (
+                                f"Invalid email for {field.label}"
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            # ------------------------------------------------------
+            # Number validation
+            # ------------------------------------------------------
+
+            if field.field_type == "number":
+
+                try:
+                    number_value = float(value)
+
+                except ValueError:
+                    return Response(
+                        {
+                            "error": (
+                                f"{field.label} must be a number"
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                if (
+                    field.min_value is not None
+                    and number_value < field.min_value
+                ):
+                    return Response(
+                        {
+                            "error": (
+                                "Invalid Phone Number, Please Recheck"
+                                if field.label == "Phone Number"
+                                else f"Invalid value for {field.label}. Please Recheck"
+
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                if (
+                    field.max_value is not None
+                    and number_value > field.max_value
+                ):
+                    return Response(
+                        {
+                            "error": (
+                                "Invalid Phone Number, Please Recheck"
+                                if field.label == "Phone Number"
+                                else f"Invalid value for {field.label}. Please Recheck"
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+            # ------------------------------------------------------
+            # Dropdown validation
+            # ------------------------------------------------------
+
+            if field.field_type == "dropdown":
+
+                valid_options = FieldOption.objects.filter(
+                    field=field
+                ).values_list(
+                    "option_text",
+                    flat=True
+                )
+
+                if value not in valid_options:
+                    return Response(
+                        {
+                            "error": (
+                                f"Invalid option for {field.label}"
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+        # ==========================================================
+        # 6. CREATE SUBMISSION
+        # ==========================================================
+
+        submission = Submission.objects.create(
+            form_version=form_version,
+            ip_address=request.META.get("REMOTE_ADDR"),
+            status="submitted"
+        )
+        # ==========================================================
+        # 7. SAVE RESPONSE VALUES
+        # ==========================================================
+
+        for item in responses:
+
+            field_id = item.get("field_id")
+            value = item.get("value", "")
+
+            try:
+                field = Field.objects.get(
+                    id=field_id,
+                    form_version=form_version
+                )
+
+            except Field.DoesNotExist:
+                continue
+
+            # Don't save hidden fields
+            if field.id in hidden_fields:
+                continue
+
+            if field.field_type == "file":
+                uploaded_file = files.get(str(field.id))
+
+                if uploaded_file:
+                    ResponseValue.objects.create(
+                        submission=submission,
+                        field=field,
+                        value=uploaded_file.name
+                    )
+
+                continue
+
+            ResponseValue.objects.create(
+                submission=submission,
+                field=field,
+                value=str(value)
+            )
+
+
+        # ==========================================================
+        # SAVE UPLOADED FILES
+        # ==========================================================
+
+        for field in fields:
+
+            if field.field_type != "file":
+                continue
+
+            uploaded_file = files.get(str(field.id))
+
+            if not uploaded_file:
+                continue
+
+            UploadedFile.objects.create(
+                submission=submission,
+                field=field,
+                file=uploaded_file
+            )
+        # ==========================================================
+        # 8. RETURN RESPONSE ID
+        # ==========================================================
+
+        return Response(
+            {
+                "response_id": f"RESP-{submission.id}",
+                "message": "Submitted Successfully"
+            },
+            status=status.HTTP_201_CREATED
+        )
 class ConditionalRuleViewSet(viewsets.ModelViewSet):
     queryset = ConditionalRule.objects.all()
     serializer_class = ConditionalRuleSerializer
@@ -408,6 +893,10 @@ def public_form_by_uuid(request, uuid):
             "field_type": field.field_type,
             "placeholder": field.placeholder,
             "required": field.is_required,
+            "min_length": field.min_length,
+            "max_length": field.max_length,
+            "min_value": field.min_value,
+            "max_value": field.max_value,
             "options": [
                 option.option_text
                 for option in FieldOption.objects.filter(field=field)
