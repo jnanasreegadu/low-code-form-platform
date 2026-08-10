@@ -467,21 +467,27 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def count(self, request):
         return Response({
-            "count": Submission.objects.count()
+            "count": Submission.objects.filter(
+    form_version__form__owner=request.user
+).count()
         })
 
-    @action(detail=False, methods=["get"])
-    def responses(self, request):
-        submissions = Submission.objects.all().order_by("-submitted_at")
+@action(detail=False, methods=["get"])
+def responses(self, request):
+    submissions = Submission.objects.filter(
+        form_version__form__owner=request.user
+    ).order_by("-submitted_at")
 
-        data = []
+    data = []   
+    
+    for submission in submissions:
+        response_values = ResponseValue.objects.filter(
+            submission=submission
+        )
 
-        for submission in submissions:
-            response_values = ResponseValue.objects.filter(submission=submission)
+        responses = []
 
-            responses = []
-
-            for response in response_values:
+        for response in response_values:
 
                 file_url = None
 
@@ -496,18 +502,18 @@ class SubmissionViewSet(viewsets.ModelViewSet):
                             uploaded_file.file.url
                         )
 
-                responses.append({
-                    "field": response.field.label,
-                    "value": response.value,
-                    "file_url": file_url,
-                })
+                    responses.append({
+                        "field": response.field.label,
+                        "value": response.value,
+                        "file_url": file_url,
+                    })
 
-            data.append({
-                "submission_id": submission.id,
-                "form_version": submission.form_version.version,
-                "submitted_at": submission.submitted_at,
-                "responses": responses,
-            })
+                data.append({
+                    "submission_id": submission.id,
+                    "form_version": submission.form_version.version,
+                    "submitted_at": submission.submitted_at,
+                    "responses": responses,
+                })
 
         return Response(data)
 
