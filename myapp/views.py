@@ -37,11 +37,18 @@ class FormViewSet(viewsets.ModelViewSet):
     queryset = Form.objects.all()
     serializer_class = FormSerializer
 
+    def get_queryset(self):
+        if self.action == "public":
+            return Form.objects.all()
+
+        return Form.objects.filter(owner=self.request.user)
+
     def create(self, request):
         data = request.data
 
         # Create Form
         form = Form.objects.create(
+            owner=request.user,
             title=data["title"],
             description=data["description"],
             status=data.get("status", "draft"),

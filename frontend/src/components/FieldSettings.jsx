@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 function FieldSettings({
     selectedField,
     updateLabel,
@@ -7,6 +8,11 @@ function FieldSettings({
     updateOptions,
     addOption,
   }) {
+    const [localOptions, setLocalOptions] = useState([]);
+
+useEffect(() => {
+  setLocalOptions(selectedField?.options || []);
+}, [selectedField?.id]);
     if (!selectedField) {
       return (
         <div className="field-settings-card">
@@ -161,20 +167,25 @@ e.target.value
   <>
     <label>Options</label>
 
-    {selectedField.options?.map((option, index) => (
-      <input
-        key={index}
-        type="text"
-        value={option}
-        onChange={(e) =>
-          updateOptions(
-            selectedField.id,
-            index,
-            e.target.value
-          )
-        }
-      />
-    ))}
+    {localOptions.map((option, index) => (
+  <input
+    key={index}
+    type="text"
+    value={option}
+    onChange={(e) => {
+      const newOptions = [...localOptions];
+      newOptions[index] = e.target.value;
+      setLocalOptions(newOptions);
+    }}
+    onBlur={(e) => {
+      updateOptions(
+        selectedField.id,
+        index,
+        e.target.value
+      );
+    }}
+  />
+))}
 
     <button
       type="button"

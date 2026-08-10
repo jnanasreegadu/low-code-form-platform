@@ -91,8 +91,8 @@ function CreateForm() {
     }
   };
   const updateOptions = (fieldId, optionIndex, value) => {
-    setFields(
-      fields.map((field) => {
+    setFields((prevFields) =>
+      prevFields.map((field) => {
         if (field.id === fieldId) {
           const newOptions = [...field.options];
           newOptions[optionIndex] = value;
