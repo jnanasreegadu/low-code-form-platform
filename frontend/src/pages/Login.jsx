@@ -51,11 +51,9 @@ function Login() {
         <button onClick={handleLogin}>
           Login
         </button>
-        <div className="demo-credentials">
-  <p><strong>Demo Account</strong></p>
-  <p>Username: <strong>demo</strong></p>
-  <p>Password: <strong>demo123</strong></p>
-</div>
+        <button onClick={() => navigate("/register")}>
+          Create Account
+        </button>
 
       </div>
     </div>

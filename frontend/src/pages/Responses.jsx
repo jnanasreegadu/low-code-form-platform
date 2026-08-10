@@ -62,6 +62,7 @@ function Responses() {
                 {item.responses.map((res, index) => (
                   <tr key={index}>
                     <td>{res.field}</td>
+
                     <td>
                       {res.file_url ? (
                         <a

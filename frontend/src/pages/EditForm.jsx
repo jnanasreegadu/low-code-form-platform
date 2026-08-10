@@ -50,7 +50,11 @@ function EditForm() {
           ? "Department"
           : type === "Checkbox"
           ? "Accept Terms"
-          : "Date of Birth",
+          : type === "Date"
+          ? "Date of Birth"
+          : type === "File Upload"
+          ? "File Upload"
+          : type,
   required: false,
   placeholder:
   type === "Text"

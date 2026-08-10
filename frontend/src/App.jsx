@@ -8,6 +8,7 @@ import ViewForm from "./pages/ViewForm";
 import EditForm from "./pages/EditForm";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PublicForm from "./pages/PublicForm";
+import Register from "./pages/Register";
 function App() {
   return (
     <BrowserRouter>
@@ -18,6 +19,10 @@ function App() {
         <Route path="/create" element={ <ProtectedRoute><CreateForm /></ProtectedRoute>} />
         <Route path="/edit/:id" element={ <ProtectedRoute><EditForm /></ProtectedRoute>} />
         <Route path="/login" element={<Login/>}/>
+        <Route
+  path="/register"
+  element={<Register />}
+/>
         <Route
   path="/form/:uuid"
   element={<PublicForm />}

@@ -21,70 +21,99 @@ function PublicForm() {
           (rule) => rule.target_field === fieldId
         );
       
+        // No rules for this field → show normally
+        if (fieldRules.length === 0) {
+          return false;
+        }
+      
         let shouldHide = false;
+        let hasShowRule = false;
+        let showConditionMet = false;
       
         for (const rule of fieldRules) {
-          const sourceValue = responses[rule.source_field] || "";
+          const sourceValue = responses[rule.source_field];
       
-          const conditionMet =
-            (rule.operator === "equals" &&
-              sourceValue === rule.expected_value) ||
+          // Convert values to strings so checkbox true/false
+          // can match expected_value "true"/"false"
+          const actualValue =
+            sourceValue === true
+              ? "true"
+              : sourceValue === false
+              ? "false"
+              : String(sourceValue ?? "");
       
-            (rule.operator === "not_equals" &&
-              sourceValue !== rule.expected_value) ||
+          const expectedValue = String(rule.expected_value ?? "");
       
-            (rule.operator === "contains" &&
-              sourceValue.includes(rule.expected_value)) ||
+          let conditionMet = false;
       
-            (rule.operator === "is_empty" &&
-              sourceValue.trim() === "") ||
+          if (rule.operator === "equals") {
+            conditionMet = actualValue === expectedValue;
+          }
       
-            (rule.operator === "greater_than" &&
-              Number(sourceValue) > Number(rule.expected_value));
+          else if (rule.operator === "not_equals") {
+            conditionMet = actualValue !== expectedValue;
+          }
       
-          if (conditionMet && rule.action === "hide") {
+          else if (rule.operator === "contains") {
+            conditionMet = actualValue.includes(expectedValue);
+          }
+      
+          else if (rule.operator === "is_empty") {
+            conditionMet = actualValue.trim() === "";
+          }
+      
+          else if (rule.operator === "greater_than") {
+            conditionMet =
+              Number(actualValue) > Number(expectedValue);
+          }
+      
+          // SHOW rule
+          if (rule.action === "show") {
+            hasShowRule = true;
+      
+            if (conditionMet) {
+              showConditionMet = true;
+            }
+          }
+      
+          // HIDE rule
+          if (rule.action === "hide" && conditionMet) {
             shouldHide = true;
           }
         }
       
-        return shouldHide;
+        // Hide rule has priority
+        if (shouldHide) {
+          return true;
+        }
+      
+        // If a show rule exists, hide until its condition becomes true
+        if (hasShowRule && !showConditionMet) {
+          return true;
+        }
+      
+        return false;
       };
       
       const handleSubmit = async () => {
 
         const formData = new FormData();
       
-        const responseData = Object.keys(responses).map((id) => {
-          const field = form.fields.find(
-            (f) => f.id === Number(id)
-          );
-        
-          return {
-            field_id: Number(id),
-            value:
-              field?.field_type === "file"
-                ? ""
-                : responses[id],
-          };
-        });
+        const responseData = Object.keys(responses).map((id) => ({
+          field_id: Number(id),
+          value:
+            responses[id] instanceof File
+              ? ""
+              : responses[id],
+        }));
       
         // Normal field responses
         formData.append("responses", JSON.stringify(responseData));
       
         // File uploads
         Object.keys(responses).forEach((id) => {
-          const field = form.fields.find(
-            (f) => f.id === Number(id)
-          );
-        
-          if (
-            field?.field_type === "file" &&
-            responses[id]
-          ) {
-            formData.append(
-              id,
-              responses[id]
-            );
+          if (responses[id] instanceof File) {
+            formData.append(id, responses[id]);
           }
         });
       
@@ -180,11 +209,17 @@ function PublicForm() {
   <select
     onChange={(e) => handleChange(field.id, e.target.value)}
   >
-    <option>Select Department</option>
+    <option value="">
+      {field.placeholder || "Select an option"}
+    </option>
 
-    {field.options?.map((option, index) => (
-      <option key={index}>{option}</option>
-    ))}
+    {field.options
+      ?.filter((option) => option !== "")
+      .map((option, index) => (
+        <option key={index} value={option}>
+          {option}
+        </option>
+      ))}
   </select>
 )}
 
@@ -194,7 +229,7 @@ function PublicForm() {
     onChange={(e) => handleChange(field.id, e.target.value)}
   />
 )}
-{field.field_type === "file" && (
+{(field.field_type === "file" || field.field_type === "file upload") && (
   <input
     type="file"
     onChange={(e) =>

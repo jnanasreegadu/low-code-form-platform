@@ -9,7 +9,7 @@ from .views import public_form_by_uuid
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import LoginView
+from .views import LoginView, RegisterView
 router = DefaultRouter()
 router.register(r'forms', FormViewSet)
 router.register(r'fields', FieldViewSet)
@@ -18,6 +18,7 @@ router.register(r'conditional-rules', ConditionalRuleViewSet)
 urlpatterns = [
     path("", include(router.urls)),
     path("login/", LoginView.as_view(), name="login"),
+    path("register/", RegisterView.as_view(), name="register"),
     path("public/<uuid:uuid>/", public_form_by_uuid),
 ]
 urlpatterns += static(

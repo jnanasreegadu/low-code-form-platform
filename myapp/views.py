@@ -14,6 +14,7 @@ from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.http import HttpResponse
+from django.contrib.auth.models import User
 from .models import (
     Form,
     Field,
@@ -271,40 +272,45 @@ class FormViewSet(viewsets.ModelViewSet):
     }
 )
         return Response(data)
-    @action(detail=True, methods=["post"])
-    def submit(self, request, pk=None):
-        form = self.get_object()
+@action(detail=True, methods=["post"])
+def submit(self, request, pk=None):
+    form = self.get_object()
 
-        latest_version = (
-            FormVersion.objects.filter(
-                form=form,
-                is_published=True,
-            )
-            .order_by("-version")
-            .first()
+    latest_version = (
+        FormVersion.objects.filter(
+            form=form,
+            is_published=True,
+        )
+        .order_by("-version")
+        .first()
+    )
+
+    if not latest_version:
+        return Response(
+            {"message": "No published version found"},
+            status=status.HTTP_404_NOT_FOUND,
         )
 
-        if not latest_version:
-            return Response(
-                {"message": "No published version found"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+    submission = Submission.objects.create(
+        form_version=latest_version,
+        ip_address=request.META.get("REMOTE_ADDR"),
+    )
 
-        submission = Submission.objects.create(
-            form_version=latest_version,
-            ip_address=request.META.get("REMOTE_ADDR"),
-        )
+    responses = request.data.get("responses", [])
 
-        
-        responses = request.data.get("responses", [])
-        for item in responses:
+    # ==========================================================
+    # 1. VALIDATION
+    # ==========================================================
 
-            field = Field.objects.get(id=item["field_id"])
+    for item in responses:
 
-            value = str(item["value"]).strip()
+        field = Field.objects.get(id=item["field_id"])
 
-            # Required Validation
-            if field.is_required and value == "":
+        # File field
+        if field.field_type == ["file", "file upload"]:
+            uploaded_file = request.FILES.get(str(field.id))
+
+            if field.is_required and not uploaded_file:
                 return Response(
                     {
                         "error": f"{field.label} is required"
@@ -312,36 +318,87 @@ class FormViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_400_BAD_REQUEST
                 )
 
-            # Email Validation
-            if field.field_type == "email":
-                try:
-                    validate_email(value)
-                except ValidationError:
-                    return Response(
-                        {
-                            "error": f"Invalid email for {field.label}"
-                        },
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
+            continue
 
-        for item in responses:
+        value = str(item.get("value", "")).strip()
+
+        # Required Validation
+        if field.is_required and value == "":
+            return Response(
+                {
+                    "error": f"{field.label} is required"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Email Validation
+        if field.field_type == "email":
             try:
-                field = Field.objects.get(id=item["field_id"])
-
-                ResponseValue.objects.create(
-                    submission=submission,
-                    field=field,
-                    value=item["value"],
+                validate_email(value)
+            except ValidationError:
+                return Response(
+                    {
+                        "error": f"Invalid email for {field.label}"
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
                 )
 
-            except Field.DoesNotExist:
-                pass
+    # ==========================================================
+    # 2. SAVE RESPONSES + FILES
+    # ==========================================================
 
-        return Response(
-            {"message": "Form submitted successfully"},
-            status=status.HTTP_201_CREATED,
-        )
+    for item in responses:
 
+        try:
+            field = Field.objects.get(
+                id=item["field_id"]
+            )
+
+            # --------------------------------------------------
+            # FILE UPLOAD
+            # --------------------------------------------------
+
+            if field.field_type == ["file","file upload"]:
+
+                uploaded_file = request.FILES.get(
+                    str(field.id)
+                )
+
+                if uploaded_file:
+
+                    UploadedFile.objects.create(
+                        submission=submission,
+                        field=field,
+                        file=uploaded_file,
+                    )
+
+                    ResponseValue.objects.create(
+                        submission=submission,
+                        field=field,
+                        value=uploaded_file.name,
+                    )
+
+                continue
+
+            # --------------------------------------------------
+            # NORMAL FIELD
+            # --------------------------------------------------
+
+            ResponseValue.objects.create(
+                submission=submission,
+                field=field,
+                value=item.get("value", ""),
+            )
+
+        except Field.DoesNotExist:
+            pass
+
+    return Response(
+        {
+            "message": "Form submitted successfully"
+        },
+        status=status.HTTP_201_CREATED,
+    )
 
 class FieldViewSet(viewsets.ModelViewSet):
     queryset = Field.objects.all()
@@ -421,7 +478,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
 
                 file_url = None
 
-                if response.field.field_type == "file":
+                if response.field.field_type in ["file", "file upload"]:
                     uploaded_file = UploadedFile.objects.filter(
                         submission=submission,
                         field=response.field
@@ -555,7 +612,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             # File Upload Validation
             # ------------------------------------------------------
 
-            if field.field_type == "file":
+            if field.field_type in ["file","file upload"]:
 
                 
                 uploaded_file = files.get(str(field.id))
@@ -813,10 +870,16 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             if field.id in hidden_fields:
                 continue
 
-            if field.field_type == "file":
+            if field.field_type in ["file", "file upload"]:
                 uploaded_file = files.get(str(field.id))
 
                 if uploaded_file:
+                    UploadedFile.objects.create(
+                        submission=submission,
+                        field=field,
+                        file=uploaded_file
+                    )
+
                     ResponseValue.objects.create(
                         submission=submission,
                         field=field,
@@ -832,25 +895,7 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             )
 
 
-        # ==========================================================
-        # SAVE UPLOADED FILES
-        # ==========================================================
 
-        for field in fields:
-
-            if field.field_type != "file":
-                continue
-
-            uploaded_file = files.get(str(field.id))
-
-            if not uploaded_file:
-                continue
-
-            UploadedFile.objects.create(
-                submission=submission,
-                field=field,
-                file=uploaded_file
-            )
         # ==========================================================
         # 8. RETURN RESPONSE ID
         # ==========================================================
@@ -922,4 +967,31 @@ class LoginView(APIView):
         return Response(
             {"error": "Invalid username or password"},
             status=status.HTTP_401_UNAUTHORIZED
+        )
+class RegisterView(APIView):
+
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+
+        if not username or not password:
+            return Response(
+                {"error": "Username and password are required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if User.objects.filter(username=username).exists():
+            return Response(
+                {"error": "Username already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user = User.objects.create_user(
+            username=username,
+            password=password
+        )
+
+        return Response(
+            {"message": "Account created successfully"},
+            status=status.HTTP_201_CREATED
         )
