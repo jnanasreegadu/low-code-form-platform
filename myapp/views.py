@@ -42,7 +42,6 @@ class FormViewSet(viewsets.ModelViewSet):
             return Form.objects.all()
 
         return Form.objects.filter(owner=self.request.user)
-
     def create(self, request):
         data = request.data
 
@@ -62,6 +61,9 @@ class FormViewSet(viewsets.ModelViewSet):
             is_published=False
         )
 
+        # Map frontend field IDs -> backend Field objects
+        field_map = {}
+
         # Save fields into Field table
         for index, item in enumerate(data.get("fields", []), start=1):
 
@@ -78,88 +80,118 @@ class FormViewSet(viewsets.ModelViewSet):
                 field_order=index,
             )
 
+            # Save frontend ID mapping
+            field_map[str(item["id"])] = field
+
             # Save dropdown options
             if item["type"] == "Dropdown":
-                for i, option in enumerate(item.get("options", []), start=1):
+                for i, option in enumerate(
+                    item.get("options", []),
+                    start=1
+                ):
                     FieldOption.objects.create(
                         field=field,
                         option_text=option,
                         option_order=i,
                     )
 
+        # =====================================================
+        # SAVE CONDITIONAL RULES
+        # =====================================================
+
+        for rule in data.get("conditional_rules", []):
+
+            source_field = field_map.get(
+                str(rule.get("source_field_id"))
+            )
+
+            target_field = field_map.get(
+                str(rule.get("target_field_id"))
+            )
+
+            if not source_field or not target_field:
+                continue
+
+            ConditionalRule.objects.create(
+                source_field=source_field,
+                operator=rule.get("operator", "equals"),
+                expected_value=rule.get("expected_value", ""),
+                target_field=target_field,
+                action=rule.get("action", "show"),
+            )
+
         return Response(
             FormSerializer(form).data,
             status=status.HTTP_201_CREATED,
         )
-        
-    def update(self, request, *args, **kwargs):
-        print("UPDATE API HIT")
+        def update(self, request, *args, **kwargs):
+            print("UPDATE API HIT")
 
-        form = self.get_object()
-        print("FORM ID:", form.id)
-        print("STATUS BEFORE:", form.status)
+            form = self.get_object()
+            print("FORM ID:", form.id)
+            print("STATUS BEFORE:", form.status)
 
-        data = request.data
+            data = request.data
 
-        form.title = data.get("title", form.title)
-        form.description = data.get("description", form.description)
-        form.Fields = data.get("Fields", form.Fields)
-        form.save()
+            form.title = data.get("title", form.title)
+            form.description = data.get("description", form.description)
+            form.Fields = data.get("Fields", form.Fields)
+            form.save()
 
-        print("STATUS AFTER:", form.status)
+            print("STATUS AFTER:", form.status)
 
-        if form.status == "published":
-            print("ENTERED VERSION BLOCK")
+            if form.status == "published":
+                print("ENTERED VERSION BLOCK")
 
-            # Old published version ni unpublished cheyyi
-            FormVersion.objects.filter(
-                form=form,
-                is_published=True
-            ).update(is_published=False)
+                # Old published version ni unpublished cheyyi
+                FormVersion.objects.filter(
+                    form=form,
+                    is_published=True
+                ).update(is_published=False)
 
-            # Next version number
-            version_no = (
-                FormVersion.objects.filter(form=form).count() + 1
-            )
-
-            # Create new version
-            new_version = FormVersion.objects.create(
-                form=form,
-                version=version_no,
-                is_published=True,
-            )
-
-            # Save latest fields into new version
-            for index, item in enumerate(data.get("Fields", []), start=1):
-
-                new_field = Field.objects.create(
-                    form_version=new_version,
-                    label=item["label"],
-                    field_type=item["type"].lower(),
-                    placeholder=item.get("placeholder", ""),
-                    is_required=item.get("required", False),
-                    min_length=item.get("min_length"),
-                    max_length=item.get("max_length"),
-                    min_value=item.get("min_value"),
-                    max_value=item.get("max_value"),
-                    field_order=index,
+                # Next version number
+                version_no = (
+                    FormVersion.objects.filter(form=form).count() + 1
                 )
 
-                if item["type"] == "Dropdown":
-                    for i, option in enumerate(
-                        item.get("options", []),
-                        start=1,
-                    ):
-                        FieldOption.objects.create(
-                            field=new_field,
-                            option_text=option,
-                            option_order=i,
-                        )
+                # Create new version
+                new_version = FormVersion.objects.create(
+                    form=form,
+                    version=version_no,
+                    is_published=True,
+                )
 
-        return Response(
-            FormSerializer(form).data,
-            status=status.HTTP_200_OK,
-            )
+                # Save latest fields into new version
+                for index, item in enumerate(data.get("Fields", []), start=1):
+
+                    new_field = Field.objects.create(
+                        form_version=new_version,
+                        label=item["label"],
+                        field_type=item["type"].lower(),
+                        placeholder=item.get("placeholder", ""),
+                        is_required=item.get("required", False),
+                        min_length=item.get("min_length"),
+                        max_length=item.get("max_length"),
+                        min_value=item.get("min_value"),
+                        max_value=item.get("max_value"),
+                        field_order=index,
+                    )
+
+                    if item["type"] == "Dropdown":
+                        for i, option in enumerate(
+                            item.get("options", []),
+                            start=1,
+                        ):
+                            FieldOption.objects.create(
+                                field=new_field,
+                                option_text=option,
+                                option_order=i,
+                            )
+
+            return Response(
+                FormSerializer(form).data,
+                status=status.HTTP_200_OK,
+                )
 
 
     @action(detail=True, methods=["post"])
@@ -278,134 +310,7 @@ class FormViewSet(viewsets.ModelViewSet):
         ],
     }
 )
-        return Response(data)
-@action(detail=True, methods=["post"])
-def submit(self, request, pk=None):
-    form = self.get_object()
 
-    latest_version = (
-        FormVersion.objects.filter(
-            form=form,
-            is_published=True,
-        )
-        .order_by("-version")
-        .first()
-    )
-
-    if not latest_version:
-        return Response(
-            {"message": "No published version found"},
-            status=status.HTTP_404_NOT_FOUND,
-        )
-
-    submission = Submission.objects.create(
-        form_version=latest_version,
-        ip_address=request.META.get("REMOTE_ADDR"),
-    )
-
-    responses = request.data.get("responses", [])
-
-    # ==========================================================
-    # 1. VALIDATION
-    # ==========================================================
-
-    for item in responses:
-
-        field = Field.objects.get(id=item["field_id"])
-
-        # File field
-        if field.field_type == ["file", "file upload"]:
-            uploaded_file = request.FILES.get(str(field.id))
-
-            if field.is_required and not uploaded_file:
-                return Response(
-                    {
-                        "error": f"{field.label} is required"
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-            continue
-
-        value = str(item.get("value", "")).strip()
-
-        # Required Validation
-        if field.is_required and value == "":
-            return Response(
-                {
-                    "error": f"{field.label} is required"
-                },
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        # Email Validation
-        if field.field_type == "email":
-            try:
-                validate_email(value)
-            except ValidationError:
-                return Response(
-                    {
-                        "error": f"Invalid email for {field.label}"
-                    },
-                    status=status.HTTP_400_BAD_REQUEST
-                )
-
-    # ==========================================================
-    # 2. SAVE RESPONSES + FILES
-    # ==========================================================
-
-    for item in responses:
-
-        try:
-            field = Field.objects.get(
-                id=item["field_id"]
-            )
-
-            # --------------------------------------------------
-            # FILE UPLOAD
-            # --------------------------------------------------
-
-            if field.field_type == ["file","file upload"]:
-
-                uploaded_file = request.FILES.get(
-                    str(field.id)
-                )
-
-                if uploaded_file:
-
-                    UploadedFile.objects.create(
-                        submission=submission,
-                        field=field,
-                        file=uploaded_file,
-                    )
-
-                    ResponseValue.objects.create(
-                        submission=submission,
-                        field=field,
-                        value=uploaded_file.name,
-                    )
-
-                continue
-
-            # --------------------------------------------------
-            # NORMAL FIELD
-            # --------------------------------------------------
-
-            ResponseValue.objects.create(
-                submission=submission,
-                field=field,
-                value=item.get("value", ""),
-            )
-
-        except Field.DoesNotExist:
-            pass
-
-    return Response(
-        {
-            "message": "Form submitted successfully"
-        },
-        status=status.HTTP_201_CREATED,
-    )
 
 class FieldViewSet(viewsets.ModelViewSet):
     queryset = Field.objects.all()
@@ -472,26 +377,29 @@ class SubmissionViewSet(viewsets.ModelViewSet):
 ).count()
         })
 
-@action(detail=False, methods=["get"])
-def responses(self, request):
-    submissions = Submission.objects.filter(
-        form_version__form__owner=request.user
-    ).order_by("-submitted_at")
+    @action(detail=False, methods=["get"])
+    def responses(self, request):
 
-    data = []   
-    
-    for submission in submissions:
-        response_values = ResponseValue.objects.filter(
-            submission=submission
-        )
+        submissions = Submission.objects.filter(
+            form_version__form__owner=request.user
+        ).order_by("-submitted_at")
 
-        responses = []
+        data = []
 
-        for response in response_values:
+        for submission in submissions:
+
+            response_values = ResponseValue.objects.filter(
+                submission=submission
+            )
+
+            responses = []
+
+            for response in response_values:
 
                 file_url = None
 
                 if response.field.field_type in ["file", "file upload"]:
+
                     uploaded_file = UploadedFile.objects.filter(
                         submission=submission,
                         field=response.field
@@ -502,18 +410,20 @@ def responses(self, request):
                             uploaded_file.file.url
                         )
 
-                    responses.append({
-                        "field": response.field.label,
-                        "value": response.value,
-                        "file_url": file_url,
-                    })
-
-                data.append({
-                    "submission_id": submission.id,
-                    "form_version": submission.form_version.version,
-                    "submitted_at": submission.submitted_at,
-                    "responses": responses,
+                # IMPORTANT: outside file condition
+                responses.append({
+                    "field": response.field.label,
+                    "value": response.value,
+                    "file_url": file_url,
                 })
+
+            # IMPORTANT: outside response loop
+            data.append({
+                "submission_id": submission.id,
+                "form_version": submission.form_version.version,
+                "submitted_at": submission.submitted_at,
+                "responses": responses,
+            })
 
         return Response(data)
 
