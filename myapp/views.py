@@ -80,7 +80,7 @@ class FormViewSet(viewsets.ModelViewSet):
                 field_order=index,
             )
 
-            # Save frontend ID mapping
+            # Save frontend ID -> backend Field
             field_map[str(item["id"])] = field
 
             # Save dropdown options
@@ -120,11 +120,12 @@ class FormViewSet(viewsets.ModelViewSet):
                 action=rule.get("action", "show"),
             )
 
+        # IMPORTANT: return must be OUTSIDE the loop
         return Response(
             FormSerializer(form).data,
             status=status.HTTP_201_CREATED,
         )
-        def update(self, request, *args, **kwargs):
+    def update(self, request, *args, **kwargs):
             print("UPDATE API HIT")
 
             form = self.get_object()
@@ -215,7 +216,8 @@ class FormViewSet(viewsets.ModelViewSet):
             version=latest_version,
             is_published=True,
         )
-
+        # Map old frontend field IDs to new backend fields
+        field_map = {}
         # Copy fields
         for index, item in enumerate(form.Fields, start=1):
 
@@ -231,6 +233,7 @@ class FormViewSet(viewsets.ModelViewSet):
                 max_value=item.get("max_value"),
                 field_order=index,
             )
+            field_map[str(item["id"])] = new_field
 
             if item["type"] == "Dropdown":
                 for i, option in enumerate(item.get("options", []), start=1):
@@ -238,6 +241,56 @@ class FormViewSet(viewsets.ModelViewSet):
                         field=new_field,
                         option_text=option,
                         option_order=i,
+                    )
+        # Copy conditional rules
+        # Copy conditional rules from previous version
+        old_version = (
+            FormVersion.objects
+            .filter(form=form)
+            .exclude(id=new_version.id)
+            .order_by("-version")
+            .first()
+        )
+
+        if old_version:
+
+            old_fields = {
+                field.field_order: field
+                for field in Field.objects.filter(
+                    form_version=old_version
+                )
+            }
+
+            new_fields = {
+                field.field_order: field
+                for field in Field.objects.filter(
+                    form_version=new_version
+                )
+            }
+
+            rules = ConditionalRule.objects.filter(
+                source_field__form_version=old_version,
+                target_field__form_version=old_version
+            )
+
+            for rule in rules:
+
+                source_field = new_fields.get(
+                    rule.source_field.field_order
+                )
+
+                target_field = new_fields.get(
+                    rule.target_field.field_order
+                )
+
+                if source_field and target_field:
+
+                    ConditionalRule.objects.create(
+                        source_field=source_field,
+                        operator=rule.operator,
+                        expected_value=rule.expected_value,
+                        target_field=target_field,
+                        action=rule.action
                     )
         return Response({"message": "Form published successfully"})
     @action(detail=True, methods=["post"])
@@ -285,11 +338,13 @@ class FormViewSet(viewsets.ModelViewSet):
         ).order_by("field_order")
 
         data = {
-            "form_id": form.id,
-            "form_name": form.title,
-            "version": latest_version.version,
-            "fields": [],
-        }
+    "form_name": version.form.title,
+    "description": version.form.description,
+    "version": version.version,
+    "uuid": str(version.uuid),
+    "fields": [],
+    "rules": [],
+}
 
         for field in fields:
             data["fields"].append(
@@ -837,41 +892,55 @@ class ConditionalRuleViewSet(viewsets.ModelViewSet):
 @api_view(["GET"])
 def public_form_by_uuid(request, uuid):
 
-    version = get_object_or_404(
-        FormVersion,
-        uuid=uuid
-    )
+        version = get_object_or_404(
+            FormVersion,
+            uuid=uuid
+        )
 
-    fields = Field.objects.filter(
-        form_version=version
-    ).order_by("field_order")
+        fields = Field.objects.filter(
+            form_version=version
+        ).order_by("field_order")
 
-    data = {
-        "form_name": version.form.title,
-        "description": version.form.description,
-        "version": version.version,
-        "uuid": str(version.uuid),
-        "fields": [],
-    }
+        data = {
+            "form_name": version.form.title,
+            "description": version.form.description,
+            "version": version.version,
+            "uuid": str(version.uuid),
+            "fields": [],
+            "rules": [],
+        }
 
-    for field in fields:
-        data["fields"].append({
-            "id": field.id,
-            "label": field.label,
-            "field_type": field.field_type,
-            "placeholder": field.placeholder,
-            "required": field.is_required,
-            "min_length": field.min_length,
-            "max_length": field.max_length,
-            "min_value": field.min_value,
-            "max_value": field.max_value,
-            "options": [
-                option.option_text
-                for option in FieldOption.objects.filter(field=field)
-            ],
-        })
+        for field in fields:
+            data["fields"].append({
+                "id": field.id,
+                "label": field.label,
+                "field_type": field.field_type,
+                "placeholder": field.placeholder,
+                "required": field.is_required,
+                "min_length": field.min_length,
+                "max_length": field.max_length,
+                "min_value": field.min_value,
+                "max_value": field.max_value,
+                "options": [
+                    option.option_text
+                    for option in FieldOption.objects.filter(field=field)
+                ],
+            })
+        rules = ConditionalRule.objects.filter(
+            source_field__form_version=version,
+            target_field__form_version=version
+        )
 
-    return Response(data)
+        for rule in rules:
+            data["rules"].append({
+                "source_field": rule.source_field.id,
+                "operator": rule.operator,
+                "expected_value": rule.expected_value,
+                "target_field": rule.target_field.id,
+                "action": rule.action,
+            })
+
+        return Response(data)
 class LoginView(APIView):
     def post(self, request):
         username = request.data.get("username")

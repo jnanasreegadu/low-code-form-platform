@@ -140,19 +140,12 @@ function PublicForm() {
           .then((res) => {
             console.log(res.data);
             setForm(res.data);
+            setRules(res.data.rules || []);
           })
           .catch((err) => {
             console.log(err);
           });
       
-        api.get("conditional-rules/")
-          .then((res) => {
-            console.log("CONDITIONAL RULES:", res.data);
-            setRules(res.data);
-          })
-          .catch((err) => {
-            console.log("RULE ERROR:", err);
-          });
       
       }, [uuid]);
 

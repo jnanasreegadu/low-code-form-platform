@@ -13,7 +13,7 @@ function CreateForm() {
   const [description, setDescription] = useState("");
   const [fields, setFields] = useState([]);
   const [selectedField, setSelectedField] = useState(null);
-
+  const [rules, setRules] = useState([]);
   const addField = (type) => {
 
     const newField = {
@@ -179,11 +179,20 @@ function CreateForm() {
   };
   const publishForm = async () => {
     try {
+      console.log("RULES BEING SENT:", rules);
       const data = {
         title,
         description,
         fields,
         status: "draft",
+      
+        conditional_rules: rules.map((rule) => ({
+          source_field_id: rule.sourceField,
+          operator: rule.operator,
+          expected_value: rule.expectedValue,
+          target_field_id: rule.targetField,
+          action: rule.action,
+        })),
       };
   
       const response = await api.post("forms/", data);
@@ -206,6 +215,14 @@ function CreateForm() {
         description,
         fields,
         status: "draft",
+      
+        conditional_rules: rules.map((rule) => ({
+          source_field_id: rule.sourceField,
+          operator: rule.operator,
+          expected_value: rule.expectedValue,
+          target_field_id: rule.targetField,
+          action: rule.action,
+        })),
       };
   
       await api.post("forms/", data);
@@ -322,6 +339,7 @@ function CreateForm() {
 <FieldLibrary addField={addField} />
 <FieldSettings
   selectedField={selectedField}
+  fields={fields}
   updateLabel={updateLabel}
   updatePlaceholder={updatePlaceholder}
   updateValidation={updateValidation}
@@ -329,6 +347,8 @@ function CreateForm() {
   deleteField={deleteField}
   updateOptions={updateOptions}
   addOption={addOption}
+  rules={rules}
+  setRules={setRules}
 />   
 
 </div>

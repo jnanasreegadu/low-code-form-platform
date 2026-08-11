@@ -414,3 +414,122 @@ textarea:focus{
     gap:30px;
     align-items:start;
 }
+/* ============================= */
+/* Conditional Logic Section     */
+/* ============================= */
+
+.conditional-section {
+    margin-top: 28px;
+    padding: 22px 20px;
+    border-radius: 18px;
+  
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(72, 200, 255, 0.18);
+  
+    box-shadow:
+      0 8px 25px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  
+  .conditional-section h3 {
+    margin: 0 0 22px;
+    text-align: center;
+  
+    font-size: 21px;
+    font-weight: 700;
+  
+    color: #ffffff;
+  }
+  
+  /* Labels */
+  
+  .conditional-section label {
+    display: block;
+  
+    margin: 14px 0 7px;
+  
+    font-size: 14px;
+    font-weight: 600;
+  
+    color: #d9e7ef;
+  }
+  
+  /* Inputs + Selects */
+  
+  .conditional-section select,
+  .conditional-section input {
+    width: 100%;
+    box-sizing: border-box;
+  
+    height: 44px;
+    padding: 0 13px;
+  
+    border: 1px solid rgba(82, 196, 255, 0.18);
+    border-radius: 10px;
+  
+    background: rgba(255, 255, 255, 0.07);
+  
+    color: #ffffff;
+  
+    font-size: 14px;
+  
+    outline: none;
+  
+    transition: 0.2s ease;
+  }
+  
+  /* Focus */
+  
+  .conditional-section select:focus,
+  .conditional-section input:focus {
+    border-color: #4dc8ff;
+  
+    box-shadow:
+      0 0 0 3px rgba(77, 200, 255, 0.12);
+  
+    background: rgba(255, 255, 255, 0.09);
+  }
+  
+  /* Placeholder */
+  
+  .conditional-section input::placeholder {
+    color: rgba(255, 255, 255, 0.38);
+  }
+  
+  /* Dropdown option */
+  
+  .conditional-section select option {
+    background: #172631;
+    color: #ffffff;
+  }
+  
+  /* Small spacing between controls */
+  
+  .conditional-section > label + select,
+  .conditional-section > label + input {
+    margin-bottom: 4px;
+  }
+  .delete-setting-btn {
+    width: 100%;
+    margin-top: 18px;
+  
+    height: 42px;
+  
+    border: none;
+    border-radius: 10px;
+  
+    background: rgba(255, 70, 70, 0.85);
+    color: white;
+  
+    font-size: 14px;
+    font-weight: 600;
+  
+    cursor: pointer;
+  
+    transition: 0.2s ease;
+  }
+  
+  .delete-setting-btn:hover {
+    background: rgba(255, 70, 70, 1);
+    transform: translateY(-1px);
+  }

@@ -7,6 +7,9 @@ function FieldSettings({
     deleteField,
     updateOptions,
     addOption,
+    rules,
+    setRules,
+    fields,
   }) {
     const [localOptions, setLocalOptions] = useState([]);
 
@@ -195,7 +198,130 @@ e.target.value
     </button>
   </>
 )}
-  
+{/* Conditional Logic */}
+<div className="conditional-section">
+  <h3>Conditional Logic</h3>
+
+  <label>IF Field</label>
+
+  <select
+    value={
+      rules.find(
+        (rule) => rule.targetField === selectedField.id
+      )?.sourceField || ""
+    }
+    onChange={(e) => {
+      const sourceField = Number(e.target.value);
+
+      setRules((prev) => {
+        const existing = prev.find(
+          (rule) => rule.targetField === selectedField.id
+        );
+
+        if (existing) {
+          return prev.map((rule) =>
+            rule.targetField === selectedField.id
+              ? { ...rule, sourceField }
+              : rule
+          );
+        }
+
+        return [
+          ...prev,
+          {
+            sourceField,
+            operator: "equals",
+            expectedValue: "",
+            targetField: selectedField.id,
+            action: "show",
+          },
+        ];
+      });
+    }}
+  >
+    <option value="">Select Field</option>
+
+    {fields
+      .filter((field) => field.id !== selectedField.id)
+      .map((field) => (
+        <option key={field.id} value={field.id}>
+          {field.label}
+        </option>
+      ))}
+  </select>
+
+  <label>Condition</label>
+
+  <select
+    value={
+      rules.find(
+        (rule) => rule.targetField === selectedField.id
+      )?.operator || "equals"
+    }
+    onChange={(e) => {
+      setRules((prev) =>
+        prev.map((rule) =>
+          rule.targetField === selectedField.id
+            ? { ...rule, operator: e.target.value }
+            : rule
+        )
+      );
+    }}
+  >
+    <option value="equals">Equals</option>
+    <option value="not_equals">Not Equals</option>
+    <option value="contains">Contains</option>
+    <option value="greater_than">Greater Than</option>
+    <option value="less_than">Less Than</option>
+  </select>
+
+  <label>Value</label>
+
+  <input
+    type="text"
+    placeholder="Example: Yes"
+    value={
+      rules.find(
+        (rule) => rule.targetField === selectedField.id
+      )?.expectedValue || ""
+    }
+    onChange={(e) => {
+      setRules((prev) =>
+        prev.map((rule) =>
+          rule.targetField === selectedField.id
+            ? {
+                ...rule,
+                expectedValue: e.target.value,
+              }
+            : rule
+        )
+      );
+    }}
+  />
+
+  <label>Action</label>
+
+  <select
+    value={
+      rules.find(
+        (rule) => rule.targetField === selectedField.id
+      )?.action || "show"
+    }
+    onChange={(e) => {
+      setRules((prev) =>
+        prev.map((rule) =>
+          rule.targetField === selectedField.id
+            ? { ...rule, action: e.target.value }
+            : rule
+        )
+      );
+    }}
+  >
+    <option value="show">Show</option>
+    <option value="hide">Hide</option>
+  </select>
+</div>  
+
         <button
           className="delete-setting-btn"
           onClick={() =>
