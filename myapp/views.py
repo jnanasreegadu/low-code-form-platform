@@ -79,7 +79,7 @@ class FormViewSet(viewsets.ModelViewSet):
                 max_value=item.get("maxValue") or None,
                 min_date=item.get("minDate") or None,
                 max_date=item.get("maxDate") or None,
-                
+                field_order=index,
             )
 
             # Save frontend ID -> backend Field

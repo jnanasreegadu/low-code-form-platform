@@ -11,89 +11,92 @@ function PublicForm() {
     const [responses, setResponses] = useState({});
     const [rules, setRules] = useState([]);
     const handleChange = (fieldId, value) => {
-        setResponses({
-          ...responses,
-          [fieldId]: value,
-        });
-      };
+      setResponses((prev) => ({
+        ...prev,
+        [fieldId]: value,
+      }));
+    };
     const isFieldHidden = (fieldId) => {
-        const fieldRules = rules.filter(
-          (rule) => rule.target_field === fieldId
-        );
-      
-        // No rules for this field → show normally
-        if (fieldRules.length === 0) {
-          return false;
-        }
-      
-        let shouldHide = false;
-        let hasShowRule = false;
-        let showConditionMet = false;
-      
-        for (const rule of fieldRules) {
-          const sourceValue = responses[rule.source_field];
-      
-          // Convert values to strings so checkbox true/false
-          // can match expected_value "true"/"false"
-          const actualValue =
-            sourceValue === true
-              ? "true"
-              : sourceValue === false
-              ? "false"
-              : String(sourceValue ?? "");
-      
-          const expectedValue = String(rule.expected_value ?? "");
-      
-          let conditionMet = false;
-      
-          if (rule.operator === "equals") {
-            conditionMet = actualValue === expectedValue;
-          }
-      
-          else if (rule.operator === "not_equals") {
-            conditionMet = actualValue !== expectedValue;
-          }
-      
-          else if (rule.operator === "contains") {
-            conditionMet = actualValue.includes(expectedValue);
-          }
-      
-          else if (rule.operator === "is_empty") {
-            conditionMet = actualValue.trim() === "";
-          }
-      
-          else if (rule.operator === "greater_than") {
-            conditionMet =
-              Number(actualValue) > Number(expectedValue);
-          }
-      
-          // SHOW rule
-          if (rule.action === "show") {
-            hasShowRule = true;
-      
-            if (conditionMet) {
-              showConditionMet = true;
-            }
-          }
-      
-          // HIDE rule
-          if (rule.action === "hide" && conditionMet) {
-            shouldHide = true;
-          }
-        }
-      
-        // Hide rule has priority
-        if (shouldHide) {
-          return true;
-        }
-      
-        // If a show rule exists, hide until its condition becomes true
-        if (hasShowRule && !showConditionMet) {
-          return true;
-        }
-      
+
+      const fieldRules = rules.filter((rule) => {
+    
+        const targetId =
+          rule.target_field ??
+          rule.target_field_id ??
+          rule.targetField;
+    
+        return Number(targetId) === Number(fieldId);
+      });
+    
+      // No rule for this field → show it
+      if (fieldRules.length === 0) {
         return false;
-      };
+      }
+    
+      for (const rule of fieldRules) {
+    
+        const sourceId =
+          rule.source_field ??
+          rule.source_field_id ??
+          rule.sourceField;
+    
+        const sourceValue = responses[sourceId];
+    
+        const actualValue = String(
+          sourceValue ?? ""
+        ).trim().toLowerCase();
+    
+        const expectedValue = String(
+          rule.expected_value ??
+          rule.expectedValue ??
+          ""
+        ).trim().toLowerCase();
+    
+        const operator = rule.operator;
+    
+        let conditionMet = false;
+    
+        if (operator === "equals") {
+          conditionMet = actualValue === expectedValue;
+        }
+    
+        else if (operator === "not_equals") {
+          conditionMet = actualValue !== expectedValue;
+        }
+    
+        else if (operator === "contains") {
+          conditionMet = actualValue.includes(expectedValue);
+        }
+    
+        else if (operator === "is_empty") {
+          conditionMet = actualValue === "";
+        }
+    
+        else if (operator === "greater_than") {
+          conditionMet =
+            Number(actualValue) > Number(expectedValue);
+        }
+    
+        else if (operator === "less_than") {
+          conditionMet =
+            Number(actualValue) < Number(expectedValue);
+        }
+    
+        const action = rule.action;
+    
+        // SHOW rule
+        if (action === "show") {
+          return !conditionMet;
+        }
+    
+        // HIDE rule
+        if (action === "hide") {
+          return conditionMet;
+        }
+      }
+    
+      return false;
+    };
       
       const handleSubmit = async () => {
 
@@ -138,15 +141,19 @@ function PublicForm() {
       useEffect(() => {
         api.get(`public/${uuid}/`)
           .then((res) => {
-            console.log(res.data);
+            console.log("PUBLIC FORM:", res.data);
+      
             setForm(res.data);
-            setRules(res.data.rules || []);
+      
+            setRules(
+              res.data.rules ||
+              res.data.conditional_rules ||
+              []
+            );
           })
           .catch((err) => {
             console.log(err);
           });
-      
-      
       }, [uuid]);
 
     if(!form)
