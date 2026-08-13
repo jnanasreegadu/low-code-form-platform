@@ -43,7 +43,7 @@ function CreateForm() {
           : type === "Number"
           ? "Phone Number"
           : type === "Dropdown"
-          ? "Department/Branch"
+          ? "Add your Question"
           :type === "Checkbox"
           ? "Accept Terms"
           : type === "Date"
@@ -60,13 +60,13 @@ function CreateForm() {
     : type === "Number"
     ? "Enter your phone number"
     : type === "Dropdown"
-    ? "Select Department"
+    ? "option placeholder"
     : type === "Checkbox"
     ? ""
     : "",
     options:
     type === "Dropdown"
-      ? ["CSE", "ECE", "EEE", "CIVIL", "IT/DS", "AIML", "Others"]
+      ? ["Option 1", "Option 2", "Option3"]
       : [],
 
       minLength: "",
@@ -108,20 +108,20 @@ function CreateForm() {
     );
   };
   
-  const addOption = (fieldId) => {
-    setFields(
-      fields.map((field) => {
-        if (field.id === fieldId) {
+const addOption = (fieldId) => {
+  setFields((prevFields) =>
+    prevFields.map((field) => {
+      if (field.id === fieldId) {
           return {
             ...field,
-            options: [...field.options, ""],
+            options: [...(field.options || []), ""],
           };
         }
   
         return field;
       })
     );
-  };
+};
   const updateLabel = (id, value) => {
     const updatedFields = fields.map((field) =>
       field.id === id
@@ -313,43 +313,53 @@ function CreateForm() {
 
       <div className="builder-layout">
 
-{/* Form Details */}
-<div className="glass-card">
-  <h2>Form Details</h2>
+<div className="main-builder-column">
 
-  <label>Form Title</label>
+  {/* Form Details */}
+  <div className="glass-card form-details-card">
+    <h2>Form Details</h2>
 
-  <input
-    type="text"
-    placeholder="Student Registration Form"
-    value={title}
-    onChange={(e) => setTitle(e.target.value)}
-  />
+    <label>Form Title</label>
 
-  <label>Description</label>
+    <input
+      type="text"
+      placeholder="Student Registration Form"
+      value={title}
+      onChange={(e) => setTitle(e.target.value)}
+    />
 
-  <textarea
-    placeholder="Enter description..."
-    value={description}
-    onChange={(e) => setDescription(e.target.value)}
-  />
+    <label>Description</label>
+
+    <textarea
+      placeholder="Enter description..."
+      value={description}
+      onChange={(e) => setDescription(e.target.value)}
+    />
+  </div>
+
+  {/* Field Settings */}
+  <div className="field-settings-horizontal">
+    <FieldSettings
+      selectedField={selectedField}
+      fields={fields}
+      updateLabel={updateLabel}
+      updatePlaceholder={updatePlaceholder}
+      updateValidation={updateValidation}
+      toggleRequired={toggleRequired}
+      deleteField={deleteField}
+      updateOptions={updateOptions}
+      addOption={addOption}
+      rules={rules}
+      setRules={setRules}
+    />
+  </div>
+
 </div>
 
 {/* Field Library */}
-<FieldLibrary addField={addField} />
-<FieldSettings
-  selectedField={selectedField}
-  fields={fields}
-  updateLabel={updateLabel}
-  updatePlaceholder={updatePlaceholder}
-  updateValidation={updateValidation}
-  toggleRequired={toggleRequired}
-  deleteField={deleteField}
-  updateOptions={updateOptions}
-  addOption={addOption}
-  rules={rules}
-  setRules={setRules}
-/>   
+<div className="field-library-side">
+  <FieldLibrary addField={addField} />
+</div>
 
 </div>
       <PreviewPanel

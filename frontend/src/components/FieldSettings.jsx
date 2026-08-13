@@ -3,6 +3,7 @@ function FieldSettings({
     selectedField,
     updateLabel,
     updatePlaceholder,
+    updateValidation,
     toggleRequired,
     deleteField,
     updateOptions,
@@ -15,7 +16,7 @@ function FieldSettings({
 
 useEffect(() => {
   setLocalOptions(selectedField?.options || []);
-}, [selectedField?.id]);
+}, [selectedField]);
     if (!selectedField) {
       return (
         <div className="field-settings-card">
@@ -54,7 +55,7 @@ useEffect(() => {
             updatePlaceholder(selectedField.id, e.target.value)
           }
         />
-        {selectedField.type === "Text" && (
+        {selectedField.type?.toLowerCase() === "text" && (
         <>
           <label>Minimum Length</label>
 
@@ -85,70 +86,72 @@ useEffect(() => {
           />
         </>
       )}
-      {selectedField.type==="Number" && (
-<>
-<label>Minimum Value</label>
+      {selectedField.type?.toLowerCase()==="number" && (
+        <>
+        <label>Minimum Value</label>
 
-<input
-type="number"
-value={selectedField.minValue || ""}
-onChange={(e)=>
-updateValidation(
-selectedField.id,
-"minValue",
-e.target.value
-)
-}
-/>
+        <input
+          type="number"
+          placeholder="Minimum value"
+          value={selectedField.minValue || ""}
+          onChange={(e) =>
+            updateValidation(
+              selectedField.id,
+              "minValue",
+              e.target.value
+           )
+         }
+      />
 
-<label>Maximum Value</label>
+        <label>Maximum Value</label>
 
-<input
-type="number"
-value={selectedField.maxValue || ""}
-onChange={(e)=>
-updateValidation(
-selectedField.id,
-"maxValue",
-e.target.value
-)
-}
-/>
+        <input
+          type="number"
+          placeholder="Maximum value"
+          value={selectedField.maxValue || ""}
+          onChange={(e) =>
+            updateValidation(
+              selectedField.id,
+              "maxValue",
+              e.target.value
+            )
+         }
+      />
 
-</>
+  </>
 )}
-{selectedField.type==="Date" && (
-<>
-<label>Minimum Date</label>
+        {selectedField.type?.toLowerCase()==="date" && (
+        <>
+        <label>Minimum Date</label>
 
-<input
-type="date"
-value={selectedField.minDate || ""}
-onChange={(e)=>
-updateValidation(
-selectedField.id,
-"minDate",
-e.target.value
-)
-}
-/>
+        <input
+        type="date"
+        value={selectedField.minDate || ""}
+        onChange={(e)=>
+        updateValidation(
+        selectedField.id,
+        "minDate",
+        e.target.value
+        )
+        }
+        />
 
-<label>Maximum Date</label>
+        <label>Maximum Date</label>
 
-<input
-type="date"
-value={selectedField.maxDate || ""}
-onChange={(e)=>
-updateValidation(
-selectedField.id,
-"maxDate",
-e.target.value
-)
-}
-/>
+        <input
+        type="date"
+        value={selectedField.maxDate || ""}
+        onChange={(e)=>
+        updateValidation(
+        selectedField.id,
+        "maxDate",
+        e.target.value
+        )
+        }
+        />
 
-</>
-)}
+        </>
+        )}
 
 
 
@@ -166,33 +169,47 @@ e.target.value
           Required
   
         </label>
-        {selectedField.type === "Dropdown" && (
+        {selectedField.type?.toLowerCase() === "dropdown" && (
   <>
     <label>Options</label>
 
-    {localOptions.map((option, index) => (
-  <input
-    key={index}
-    type="text"
-    value={option}
-    onChange={(e) => {
-      const newOptions = [...localOptions];
-      newOptions[index] = e.target.value;
-      setLocalOptions(newOptions);
-    }}
-    onBlur={(e) => {
-      updateOptions(
-        selectedField.id,
-        index,
-        e.target.value
-      );
-    }}
-  />
-))}
+    <div className="options-list">
+      {localOptions.map((option, index) => (
+        <div className="option-row" key={index}>
+
+          <span className="option-number">
+            {index + 1}
+          </span>
+
+          <input
+            type="text"
+            value={option}
+            placeholder={`Option ${index + 1}`}
+            onChange={(e) => {
+              const newOptions = [...localOptions];
+              newOptions[index] = e.target.value;
+              setLocalOptions(newOptions);
+            }}
+            onBlur={(e) => {
+              updateOptions(
+                selectedField.id,
+                index,
+                e.target.value
+              );
+            }}
+          />
+
+        </div>
+      ))}
+    </div>
 
     <button
       type="button"
-      onClick={() => addOption(selectedField.id)}
+      className="add-option-btn"
+      onClick={() => {
+        setLocalOptions((prev) => [...prev, ""]);
+        addOption(selectedField.id);
+      }}
     >
       + Add Option
     </button>

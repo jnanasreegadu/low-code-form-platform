@@ -73,11 +73,13 @@ class FormViewSet(viewsets.ModelViewSet):
                 field_type=item["type"].lower(),
                 placeholder=item.get("placeholder", ""),
                 is_required=item.get("required", False),
-                min_length=item.get("min_length"),
-                max_length=item.get("max_length"),
-                min_value=item.get("min_value"),
-                max_value=item.get("max_value"),
-                field_order=index,
+                min_length=item.get("minLength") or None,
+                max_length=item.get("maxLength") or None,
+                min_value=item.get("minValue") or None,
+                max_value=item.get("maxValue") or None,
+                min_date=item.get("minDate") or None,
+                max_date=item.get("maxDate") or None,
+                
             )
 
             # Save frontend ID -> backend Field
@@ -166,17 +168,23 @@ class FormViewSet(viewsets.ModelViewSet):
                 for index, item in enumerate(data.get("Fields", []), start=1):
 
                     new_field = Field.objects.create(
-                        form_version=new_version,
-                        label=item["label"],
-                        field_type=item["type"].lower(),
-                        placeholder=item.get("placeholder", ""),
-                        is_required=item.get("required", False),
-                        min_length=item.get("min_length"),
-                        max_length=item.get("max_length"),
-                        min_value=item.get("min_value"),
-                        max_value=item.get("max_value"),
-                        field_order=index,
-                    )
+                            form_version=new_version,
+                            label=item["label"],
+                            field_type=item["type"].lower(),
+                            placeholder=item.get("placeholder", ""),
+                            is_required=item.get("required", False),
+
+                            min_length=item.get("minLength") or None,
+                            max_length=item.get("maxLength") or None,
+
+                            min_value=item.get("minValue") or None,
+                            max_value=item.get("maxValue") or None,
+
+                            min_date=item.get("minDate") or None,
+                            max_date=item.get("maxDate") or None,
+
+                            field_order=index,
+                        )
 
                     if item["type"] == "Dropdown":
                         for i, option in enumerate(
@@ -227,11 +235,16 @@ class FormViewSet(viewsets.ModelViewSet):
                 field_type=item["type"].lower(),
                 placeholder=item.get("placeholder", ""),
                 is_required=item.get("required", False),
-                min_length=item.get("min_length"),
-                max_length=item.get("max_length"),
-                min_value=item.get("min_value"),
-                max_value=item.get("max_value"),
+                min_length=item.get("minLength") or None,
+                max_length=item.get("maxLength") or None,
+                min_value=item.get("minValue") or None,
+                max_value=item.get("maxValue")  or None,
+                min_date=item.get("minDate") or None,
+                max_date=item.get("maxDate") or None,
+
                 field_order=index,
+
+
             )
             field_map[str(item["id"])] = new_field
 
@@ -554,9 +567,11 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             source_field__form_version=form_version,
             target_field__form_version=form_version
         )
-
         hidden_fields = set()
         required_fields = set()
+
+        # Track SHOW rules
+        show_rules = {}
 
         for rule in rules:
 
@@ -565,16 +580,35 @@ class SubmissionViewSet(viewsets.ModelViewSet):
                 submitted_data
             )
 
-            if not condition_met:
-                continue
+            # SHOW rule
+            if rule.action == "show":
+
+                if rule.target_field_id not in show_rules:
+                    show_rules[rule.target_field_id] = {
+                        "has_rule": True,
+                        "condition_met": False,
+                    }
+
+                if condition_met:
+                    show_rules[rule.target_field_id]["condition_met"] = True
 
             # HIDE rule
-            if rule.action == "hide":
-                hidden_fields.add(rule.target_field_id)
+            elif rule.action == "hide":
+
+                if condition_met:
+                    hidden_fields.add(rule.target_field_id)
 
             # REQUIRE rule
             elif rule.action == "require":
-                required_fields.add(rule.target_field_id)
+
+                if condition_met:
+                    required_fields.add(rule.target_field_id)
+            # If a SHOW rule exists and its condition is NOT met,
+            # hide that target field.
+            for field_id, rule_data in show_rules.items():
+
+                if not rule_data["condition_met"]:
+                    hidden_fields.add(field_id)
 
         # ==========================================================
         # 5. SERVER-SIDE VALIDATION
@@ -586,6 +620,36 @@ class SubmissionViewSet(viewsets.ModelViewSet):
                 field.id,
                 ""
             )
+            # ------------------------------------------------------
+            # Hidden field validation
+            # ------------------------------------------------------
+
+            if field.id in hidden_fields:
+
+                # Hidden fields should not be submitted
+                if value not in ["", None]:
+                    return Response(
+                        {
+                            "error": (
+                                f"{field.label} must not be submitted"
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Ignore hidden file fields too
+                if field.field_type in ["file", "file upload"]:
+                    if files.get(str(field.id)):
+                        return Response(
+                            {
+                                "error": (
+                                    f"{field.label} must not be submitted"
+                                )
+                            },
+                            status=status.HTTP_400_BAD_REQUEST
+                        )
+
+                continue
             # ------------------------------------------------------
             # File Upload Validation
             # ------------------------------------------------------
@@ -638,24 +702,6 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             value = str(value).strip()
 
             # ------------------------------------------------------
-            # Hidden field validation
-            # ------------------------------------------------------
-
-            if field.id in hidden_fields:
-
-                if value != "":
-                    return Response(
-                        {
-                            "error": (
-                                f"{field.label} must not be submitted"
-                            )
-                        },
-                        status=status.HTTP_400_BAD_REQUEST
-                    )
-
-                continue
-
-            # ------------------------------------------------------
             # Required validation
             # ------------------------------------------------------
 
@@ -682,12 +728,44 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             if field.field_type == "date":
 
                 try:
-                    datetime.strptime(value, "%Y-%m-%d")
+                    date_value = datetime.strptime(
+                        value, "%Y-%m-%d"
+                    ).date()
 
                 except ValueError:
                     return Response(
                         {
                             "error": "Invalid date. Please recheck."
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Minimum Date validation
+                if (
+                    field.min_date is not None
+                    and date_value < field.min_date
+                ):
+                    return Response(
+                        {
+                            "error": (
+                                f"{field.label} must be on or after "
+                                f"{field.min_date}"
+                            )
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+
+                # Maximum Date validation
+                if (
+                    field.max_date is not None
+                    and date_value > field.max_date
+                ):
+                    return Response(
+                        {
+                            "error": (
+                                f"{field.label} must be on or before "
+                                f"{field.max_date}"
+                            )
                         },
                         status=status.HTTP_400_BAD_REQUEST
                     )

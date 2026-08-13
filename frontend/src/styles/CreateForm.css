@@ -75,15 +75,6 @@ body{
 }
 
 /* ---------- Top Cards ---------- */
-
-.builder-layout{
-    display:grid;
-    grid-template-columns:2fr 1fr 1fr;
-    gap:30px;
-
-    align-items:start;   /* <-- add this */
-}
-
 .glass-card{
     background:rgba(255,255,255,.05);
     backdrop-filter:blur(20px);
@@ -410,9 +401,19 @@ textarea:focus{
 }
 .builder-layout{
     display:grid;
-    grid-template-columns:2fr 1fr 1fr;
+    grid-template-columns: 1fr 360px;
     gap:30px;
     align-items:start;
+}
+
+.main-builder-column{
+    display:flex;
+    flex-direction:column;
+    gap:30px;
+}
+
+.field-library-side{
+    width:100%;
 }
 /* ============================= */
 /* Conditional Logic Section     */
@@ -533,3 +534,101 @@ textarea:focus{
     background: rgba(255, 70, 70, 1);
     transform: translateY(-1px);
   }
+.conditional-section input[type="number"],
+.field-settings-card input[type="number"] {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.07);
+  caret-color: #ffffff;
+}
+.field-settings-card input[type="number"]::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .option-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .option-number {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .option-row input {
+    flex: 1;
+  }
+  
+  .add-option-btn {
+    width: 100%;
+    padding: 10px;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s ease;
+  }
+  
+  .add-option-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+/* ============================= */
+/* NEW BUILDER LAYOUT            */
+/* ============================= */
+
+.field-settings-horizontal{
+    width:100%;
+}
+
+.field-settings-card{
+    width:100%;
+}
+
+/* Field Library stays on right */
+.field-library-side{
+    position: sticky;
+    top: 20px;
+    height: 750px;
+    align-self: start;
+
+}
+
+/* ============================= */
+/* Field Settings Horizontal     */
+/* ============================= */
+
+.field-settings-card{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:20px 30px;
+    align-items:start;
+}
+
+.field-settings-card h2{
+    grid-column:1 / -1;
+}
+
+.field-settings-card .conditional-section{
+    grid-column:2;
+    grid-row:2 / span 10;
+    margin-top:0;
+}
+
+.field-settings-card .delete-setting-btn{
+    grid-column:1 / -1;
+}

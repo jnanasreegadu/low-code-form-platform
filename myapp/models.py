@@ -121,9 +121,26 @@ class Field(models.Model):
         null=True,
         blank=True
     )
+    min_value = models.FloatField(
+    null=True,
+    blank=True
+    )
+
+    max_value = models.FloatField(
+        null=True,
+        blank=True
+    )
+    min_date = models.DateField(
+    null=True,
+    blank=True
+)
+
+    max_date = models.DateField(
+    null=True,
+    blank=True
+)
 
     field_order = models.IntegerField(default=1)
-
     created_at = models.DateTimeField(
         auto_now_add=True
     )
