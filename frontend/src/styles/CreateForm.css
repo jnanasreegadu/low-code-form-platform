@@ -1,0 +1,634 @@
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:Inter,sans-serif;
+}
+
+.create-page{
+    min-height:100vh;
+    padding:40px;
+    background:radial-gradient(circle at top,#16384d,#09090b 70%);
+    color:white;
+}
+
+/* ---------- Navbar ---------- */
+
+.create-navbar{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:40px;
+}
+
+.nav-actions{
+    display:flex;
+    gap:15px;
+}
+
+.back-btn,
+.draft-btn,
+.publish-btn{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    border:none;
+    border-radius:14px;
+    padding:12px 22px;
+    cursor:pointer;
+    font-size:15px;
+    transition:.25s;
+}
+
+.back-btn{
+    background:rgba(255,255,255,.08);
+    color:white;
+}
+
+.draft-btn{
+    background:#2f3542;
+    color:white;
+}
+
+.publish-btn{
+    background:#4fd1ff;
+    color:#09090b;
+    font-weight:600;
+}
+
+.back-btn:hover,
+.draft-btn:hover,
+.publish-btn:hover{
+    transform:translateY(-3px);
+}
+
+/* ---------- Title ---------- */
+
+.page-title{
+    text-align:center;
+    font-size:42px;
+    margin-bottom:35px;
+    color:#4fd1ff;
+}
+
+/* ---------- Top Cards ---------- */
+.glass-card{
+    background:rgba(255,255,255,.05);
+    backdrop-filter:blur(20px);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:22px;
+    padding:28px;
+
+    height:auto;
+    min-height:fit-content;
+    overflow:visible;
+}
+.glass-card h2{
+    margin-bottom:20px;
+    color:#4fd1ff;
+}
+
+.glass-card label{
+    display:block;
+    margin:16px 0 8px;
+    color:#d1d5db;
+}
+
+.glass-card input,
+.glass-card textarea{
+    width:100%;
+    border:none;
+    outline:none;
+    border-radius:12px;
+    background:rgba(255,255,255,.08);
+    color:white;
+    padding:14px 16px;
+    font-size:15px;
+}
+
+.glass-card textarea{
+    resize:none;
+    min-height:140px;
+}
+
+/* ---------- Field Library ---------- */
+
+.field-grid{
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+.field-item{
+    width:100%;
+    border:none;
+    border-radius:16px;
+    background:rgba(255,255,255,.06);
+    color:white;
+    padding:16px;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    gap:15px;
+    transition:.25s;
+}
+
+.field-item:hover{
+    border:1px solid #4fd1ff;
+    background:rgba(79,209,255,.08);
+    transform:translateY(-3px);
+}
+
+.field-icon{
+    width:46px;
+    height:46px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    border-radius:12px;
+    background:rgba(79,209,255,.15);
+    color:#4fd1ff;
+}
+
+.field-info h4{
+    margin-bottom:4px;
+    font-size:15px;
+}
+
+.field-info p{
+    font-size:13px;
+    color:#94a3b8;
+}
+
+/* ---------- Preview ---------- */
+
+.form-preview-card{
+    margin-top:35px;
+    background:rgba(255,255,255,.05);
+    backdrop-filter:blur(20px);
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.08);
+    padding:30px;
+}
+
+.preview-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:25px;
+}
+
+.preview-header h2{
+    color:#4fd1ff;
+}
+
+.preview-header span{
+    background:rgba(255,255,255,.08);
+    padding:6px 12px;
+    border-radius:20px;
+    font-size:13px;
+    color:#cbd5e1;
+}
+
+.empty-preview{
+    text-align:center;
+    padding:70px 20px;
+    color:#94a3b8;
+}
+
+.empty-preview h3{
+    margin-bottom:10px;
+    color:white;
+}
+
+/* ---------- Each Field ---------- */
+
+.preview-field{
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:18px;
+    padding:22px;
+    margin-bottom:22px;
+}
+
+.field-header{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:18px;
+}
+
+.drag-handle{
+    color:#94a3b8;
+    cursor:grab;
+}
+
+.drag-handle:active{
+    cursor:grabbing;
+}
+
+.field-title{
+    flex:1;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+}
+
+.label-input{
+    flex:1;
+    background:transparent;
+    border:none;
+    outline:none;
+    color:white;
+    font-size:18px;
+    font-weight:600;
+}
+
+.required-badge{
+    background:#4fd1ff;
+    color:#09090b;
+    padding:4px 10px;
+    border-radius:20px;
+    font-size:12px;
+    font-weight:600;
+}
+
+.delete-btn{
+    width:42px;
+    height:42px;
+    border:none;
+    border-radius:12px;
+    background:#ef4444;
+    color:white;
+    cursor:pointer;
+    transition:.25s;
+}
+
+.delete-btn:hover{
+    transform:scale(1.05);
+}
+
+.field-body{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+}
+
+.required-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:#cbd5e1;
+}
+
+.required-row input{
+    width:auto;
+}
+
+.preview-input{
+    width:100%;
+    height:48px;
+    border:none;
+    outline:none;
+    border-radius:12px;
+    padding:0 15px;
+    background:rgba(255,255,255,.08);
+    color:white;
+}
+
+.preview-input::placeholder{
+    color:#94a3b8;
+}
+.preview-input option {
+    color: black;
+    background: white;
+  }
+
+.checkbox-preview{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    color:white;
+}
+
+/* ---------- Responsive ---------- */
+
+@media(max-width:900px){
+
+    .builder-layout{
+        grid-template-columns:1fr;
+    }
+
+    .create-navbar{
+        flex-direction:column;
+        gap:20px;
+    }
+
+    .nav-actions{
+        width:100%;
+        justify-content:center;
+        flex-wrap:wrap;
+    }
+
+    .page-title{
+        font-size:32px;
+    }
+}
+input:focus,
+textarea:focus{
+    border:1px solid #4fd1ff;
+    box-shadow:0 0 0 3px rgba(79,209,255,.15);
+}
+.active-field{
+    border:2px solid #4fd1ff;
+    box-shadow:0 0 20px rgba(79,209,255,.25);
+    transition:.25s;
+}
+.field-settings-card{
+    background: rgba(255,255,255,.05);
+    backdrop-filter: blur(20px);
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:24px;
+    padding:30px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+    height:fit-content;
+}
+
+.field-settings-card h2{
+    color:#4fd1ff;
+    margin:0 0 10px;
+}
+
+.field-settings-card label{
+    color:#d1d5db;
+    font-size:15px;
+    margin:0;
+}
+
+.field-settings-card input{
+    width:100%;
+    height:48px;
+    border:none;
+    outline:none;
+    border-radius:12px;
+    padding:0 16px;
+    background:rgba(255,255,255,.08);
+    color:white;
+    font-size:15px;
+}
+
+.settings-checkbox{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    cursor:pointer;
+}
+
+.settings-checkbox input{
+    width:auto;
+}
+
+.no-selection{
+    color:#9ca3af;
+    text-align:center;
+    padding:30px 10px;
+}
+.builder-layout{
+    display:grid;
+    grid-template-columns: 1fr 360px;
+    gap:30px;
+    align-items:start;
+}
+
+.main-builder-column{
+    display:flex;
+    flex-direction:column;
+    gap:30px;
+}
+
+.field-library-side{
+    width:100%;
+}
+/* ============================= */
+/* Conditional Logic Section     */
+/* ============================= */
+
+.conditional-section {
+    margin-top: 28px;
+    padding: 22px 20px;
+    border-radius: 18px;
+  
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(72, 200, 255, 0.18);
+  
+    box-shadow:
+      0 8px 25px rgba(0, 0, 0, 0.18),
+      inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  }
+  
+  .conditional-section h3 {
+    margin: 0 0 22px;
+    text-align: center;
+  
+    font-size: 21px;
+    font-weight: 700;
+  
+    color: #ffffff;
+  }
+  
+  /* Labels */
+  
+  .conditional-section label {
+    display: block;
+  
+    margin: 14px 0 7px;
+  
+    font-size: 14px;
+    font-weight: 600;
+  
+    color: #d9e7ef;
+  }
+  
+  /* Inputs + Selects */
+  
+  .conditional-section select,
+  .conditional-section input {
+    width: 100%;
+    box-sizing: border-box;
+  
+    height: 44px;
+    padding: 0 13px;
+  
+    border: 1px solid rgba(82, 196, 255, 0.18);
+    border-radius: 10px;
+  
+    background: rgba(255, 255, 255, 0.07);
+  
+    color: #ffffff;
+  
+    font-size: 14px;
+  
+    outline: none;
+  
+    transition: 0.2s ease;
+  }
+  
+  /* Focus */
+  
+  .conditional-section select:focus,
+  .conditional-section input:focus {
+    border-color: #4dc8ff;
+  
+    box-shadow:
+      0 0 0 3px rgba(77, 200, 255, 0.12);
+  
+    background: rgba(255, 255, 255, 0.09);
+  }
+  
+  /* Placeholder */
+  
+  .conditional-section input::placeholder {
+    color: rgba(255, 255, 255, 0.38);
+  }
+  
+  /* Dropdown option */
+  
+  .conditional-section select option {
+    background: #172631;
+    color: #ffffff;
+  }
+  
+  /* Small spacing between controls */
+  
+  .conditional-section > label + select,
+  .conditional-section > label + input {
+    margin-bottom: 4px;
+  }
+  .delete-setting-btn {
+    width: 100%;
+    margin-top: 18px;
+  
+    height: 42px;
+  
+    border: none;
+    border-radius: 10px;
+  
+    background: rgba(255, 70, 70, 0.85);
+    color: white;
+  
+    font-size: 14px;
+    font-weight: 600;
+  
+    cursor: pointer;
+  
+    transition: 0.2s ease;
+  }
+  
+  .delete-setting-btn:hover {
+    background: rgba(255, 70, 70, 1);
+    transform: translateY(-1px);
+  }
+.conditional-section input[type="number"],
+.field-settings-card input[type="number"] {
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.07);
+  caret-color: #ffffff;
+}
+.field-settings-card input[type="number"]::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+  }
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+    margin-bottom: 12px;
+  }
+  
+  .option-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .option-number {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-size: 13px;
+    font-weight: 600;
+    background: rgba(255, 255, 255, 0.1);
+  }
+  
+  .option-row input {
+    flex: 1;
+  }
+  
+  .add-option-btn {
+    width: 100%;
+    padding: 10px;
+    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.2s ease;
+  }
+  
+  .add-option-btn:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+/* ============================= */
+/* NEW BUILDER LAYOUT            */
+/* ============================= */
+
+.field-settings-horizontal{
+    width:100%;
+}
+
+.field-settings-card{
+    width:100%;
+}
+
+/* Field Library stays on right */
+.field-library-side{
+    position: sticky;
+    top: 20px;
+    height: 750px;
+    align-self: start;
+
+}
+
+/* ============================= */
+/* Field Settings Horizontal     */
+/* ============================= */
+
+.field-settings-card{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:20px 30px;
+    align-items:start;
+}
+
+.field-settings-card h2{
+    grid-column:1 / -1;
+}
+
+.field-settings-card .conditional-section{
+    grid-column:2;
+    grid-row:2 / span 10;
+    margin-top:0;
+}
+
+.field-settings-card .delete-setting-btn{
+    grid-column:1 / -1;
+}

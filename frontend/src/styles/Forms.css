@@ -1,0 +1,127 @@
+.forms-page{
+
+    min-height:100vh;
+
+    padding:50px;
+
+    background:#09090b;
+
+    color:white;
+}
+
+.forms-header{
+
+    display:flex;
+
+    justify-content:space-between;
+
+    align-items:center;
+
+    margin-bottom:40px;
+}
+
+.forms-header h1{
+
+    font-size:40px;
+}
+
+.create-btn{
+
+    padding:14px 28px;
+
+    border:none;
+
+    border-radius:12px;
+
+    background:#4fd1ff;
+
+    color:black;
+
+    font-weight:bold;
+
+    cursor:pointer;
+
+    transition:.3s;
+}
+
+.create-btn:hover{
+
+    transform:translateY(-3px);
+}
+
+.forms-table-container{
+
+    background:rgba(255,255,255,.05);
+
+    backdrop-filter:blur(20px);
+
+    border-radius:20px;
+
+    padding:25px;
+
+    border:1px solid rgba(255,255,255,.08);
+}
+
+.forms-table{
+
+    width:100%;
+
+    border-collapse:collapse;
+}
+
+.forms-table th{
+
+    text-align:left;
+
+    padding:18px;
+
+    color:#4fd1ff;
+}
+
+.forms-table td{
+
+    padding:18px;
+
+    border-top:1px solid rgba(255,255,255,.06);
+}
+
+.action-btn{
+
+    margin-right:10px;
+
+    padding:8px 16px;
+
+    border:none;
+
+    border-radius:8px;
+
+    cursor:pointer;
+
+    font-weight:bold;
+}
+
+.view{
+
+    background:#4fd1ff;
+}
+
+.edit{
+
+    background:#facc15;
+}
+
+.delete{
+
+    background:#ef4444;
+
+    color:white;
+}
+.view-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+.view-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0 15px rgba(56, 189, 248, 0.5);
+}
