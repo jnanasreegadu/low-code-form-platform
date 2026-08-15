@@ -5,7 +5,7 @@ from .views import (
     SubmissionViewSet,
     ConditionalRuleViewSet,
 )
-from .views import public_form_by_uuid
+from .views import public_form_by_uuid, start_public_form
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
@@ -20,6 +20,10 @@ urlpatterns = [
     path("login/", LoginView.as_view(), name="login"),
     path("register/", RegisterView.as_view(), name="register"),
     path("public/<uuid:uuid>/", public_form_by_uuid),
+    path(
+    "public/<uuid:uuid>/start/",
+    start_public_form,
+),
 ]
 urlpatterns += static(
     settings.MEDIA_URL,

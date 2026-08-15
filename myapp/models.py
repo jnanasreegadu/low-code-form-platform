@@ -217,7 +217,17 @@ class Submission(models.Model):
     )
 
     submitted_at = models.DateTimeField(
-        auto_now_add=True
+        null=True,
+        blank=True
+    )
+    started_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    completion_time_seconds = models.FloatField(
+        null=True,
+        blank=True
     )
 
     ip_address = models.GenericIPAddressField(

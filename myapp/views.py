@@ -15,6 +15,10 @@ from django.core.exceptions import ValidationError
 from django.core.files.uploadedfile import UploadedFile
 from django.http import HttpResponse
 from django.contrib.auth.models import User
+from django.utils import timezone
+from django.db.models import Avg, Count
+from django.db.models.functions import TruncDate
+from django.utils.dateparse import parse_datetime
 from .models import (
     Form,
     Field,
@@ -40,6 +44,9 @@ class FormViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         if self.action == "public":
             return Form.objects.all()
+
+        if not self.request.user.is_authenticated:
+            return Form.objects.none()
 
         return Form.objects.filter(owner=self.request.user)
     def create(self, request):
@@ -351,10 +358,10 @@ class FormViewSet(viewsets.ModelViewSet):
         ).order_by("field_order")
 
         data = {
-    "form_name": version.form.title,
-    "description": version.form.description,
-    "version": version.version,
-    "uuid": str(version.uuid),
+    "form_name": latest_version.form.title,
+    "description": latest_version.form.description,
+    "version": latest_version.version,
+    "uuid": str(latest_version.uuid),
     "fields": [],
     "rules": [],
 }
@@ -377,8 +384,198 @@ class FormViewSet(viewsets.ModelViewSet):
             for option in FieldOption.objects.filter(field=field)
         ],
     }
-)
+)   
+            return Response(data)
 
+
+    # ==========================================================
+    # RESPONSE ANALYTICS
+    # ==========================================================
+    @action(detail=True, methods=["get"])
+    def analytics(self, request, pk=None):
+
+        form = self.get_object()
+
+        # ==========================================================
+        # 1. SELECT FORM VERSIONS
+        # ==========================================================
+
+        version_id = request.query_params.get("version")
+
+        if version_id:
+            form_versions = FormVersion.objects.filter(
+                form=form,
+                id=version_id
+            )
+        else:
+            form_versions = FormVersion.objects.filter(
+                form=form
+            )
+
+        # ==========================================================
+        # 2. GET SUBMISSIONS
+        # ==========================================================
+
+        submissions = Submission.objects.filter(
+            form_version__in=form_versions
+        )
+
+        # ==========================================================
+        # 3. DATE FILTER
+        # ==========================================================
+
+        selected_date = request.query_params.get("date")
+        start_date = request.query_params.get("start_date")
+        end_date = request.query_params.get("end_date")
+
+        if selected_date:
+            submissions = submissions.filter(
+                started_at__date=selected_date
+            )
+
+        elif start_date and end_date:
+            submissions = submissions.filter(
+                started_at__date__range=[
+                    start_date,
+                    end_date
+                ]
+            )
+
+        # ==========================================================
+        # 4. TOTAL SUBMISSIONS
+        # ==========================================================
+
+        total_submissions = submissions.filter(
+            status="submitted"
+        ).count()
+
+        # ==========================================================
+        # 5. TOTAL STARTED
+        # ==========================================================
+
+        total_started = submissions.count()
+
+        if total_started > 0:
+            completion_rate = (
+                total_submissions / total_started
+            ) * 100
+        else:
+            completion_rate = 0
+
+        # ==========================================================
+        # 6. AVERAGE TIME TO COMPLETE
+        # ==========================================================
+
+        completed_submissions = submissions.filter(
+            status="submitted",
+            completion_time_seconds__isnull=False
+        )
+
+        average_time = completed_submissions.aggregate(
+            average=Avg("completion_time_seconds")
+        )["average"]
+
+        if average_time is None:
+            average_time = 0
+
+        # ==========================================================
+        # 7. PER-FIELD DISTRIBUTION
+        # ==========================================================
+
+        field_distribution = {}
+
+        response_values = ResponseValue.objects.filter(
+            submission__in=submissions.filter(
+                status="submitted"
+            )
+        ).select_related("field")
+
+        for response in response_values:
+
+            field = response.field
+
+            if field.field_type in [
+                "dropdown",
+                "rating"
+            ]:
+
+                field_name = field.label
+                answer = response.value
+
+                if field_name not in field_distribution:
+                    field_distribution[field_name] = {}
+
+                if answer not in field_distribution[field_name]:
+                    field_distribution[field_name][answer] = 0
+
+                field_distribution[field_name][answer] += 1
+
+        # ==========================================================
+        # 8. RETURN ANALYTICS
+        # ==========================================================
+
+        return Response({
+
+            "form_id": form.id,
+
+            "form_name": form.title,
+
+            "selected_date": selected_date,
+
+            "start_date": start_date,
+
+            "end_date": end_date,
+
+            "total_started": total_started,
+
+            "total_submissions": total_submissions,
+
+            "completion_rate": round(
+                completion_rate,
+                2
+            ),
+
+            "average_time_to_complete": round(
+                average_time,
+                2
+            ),
+
+            "field_distribution": field_distribution
+        })
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="analytics/trend"
+    )
+    def analytics_trend(self, request, pk=None):
+
+        form = self.get_object()
+
+        submissions = Submission.objects.filter(
+            form_version__form=form,
+            status="submitted"
+        )
+
+        trend = (
+            submissions
+            .annotate(date=TruncDate("submitted_at"))
+            .values("date")
+            .annotate(count=Count("id"))
+            .order_by("date")
+        )
+
+        data = []
+
+        for item in trend:
+            data.append({
+                "date": item["date"],
+                "count": item["count"]
+            })
+
+        return Response({
+            "form_id": form.id,
+            "trend": data
+        })
 
 class FieldViewSet(viewsets.ModelViewSet):
     queryset = Field.objects.all()
@@ -432,6 +629,8 @@ def evaluate_condition(rule, submitted_data):
             return False
 
     return False
+
+
 class SubmissionViewSet(viewsets.ModelViewSet):
 
     queryset = Submission.objects.all()
@@ -444,6 +643,99 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     form_version__form__owner=request.user
 ).count()
         })
+    @action(detail=False, methods=["get"])
+    def analytics(self, request):
+            if not request.user.is_authenticated:
+                return Response(
+                    {"error": "Authentication required"},
+                    status=status.HTTP_401_UNAUTHORIZED
+                )
+
+            # All submissions belonging to logged-in user's forms
+            submissions = Submission.objects.filter(
+                form_version__form__owner=request.user
+            )
+
+            # ----------------------------------------------------------
+            # 1. TOTAL SUBMISSIONS
+            # ----------------------------------------------------------
+
+            total_submissions = submissions.filter(
+                status="submitted"
+            ).count()
+
+            # ----------------------------------------------------------
+            # 2. COMPLETION RATE
+            # ----------------------------------------------------------
+
+            total_started = submissions.count()
+
+            if total_started > 0:
+                completion_rate = (
+                    total_submissions / total_started
+                ) * 100
+            else:
+                completion_rate = 0
+
+            # ----------------------------------------------------------
+            # 3. AVERAGE TIME TO COMPLETE
+            # ----------------------------------------------------------
+
+            completed_submissions = submissions.filter(
+                status="submitted",
+                completion_time_seconds__isnull=False
+            )
+
+            average_time = completed_submissions.aggregate(
+                average=Avg("completion_time_seconds")
+            )["average"]
+
+            if average_time is None:
+                average_time = 0
+
+            # ----------------------------------------------------------
+            # 4. PER-FIELD DISTRIBUTION
+            # ----------------------------------------------------------
+
+            field_distribution = {}
+
+            response_values = ResponseValue.objects.filter(
+                submission__in=submissions.filter(
+                    status="submitted"
+                )
+            ).select_related("field")
+
+            for response in response_values:
+
+                field_name = response.field.label
+
+                if response.field.field_type in [
+                    "dropdown",
+                    "rating"
+                ]:
+
+                    if field_name not in field_distribution:
+                        field_distribution[field_name] = {}
+
+                    answer = response.value
+
+                    if answer not in field_distribution[field_name]:
+                        field_distribution[field_name][answer] = 0
+
+                    field_distribution[field_name][answer] += 1
+
+            # ----------------------------------------------------------
+            # RETURN ANALYTICS
+            # ----------------------------------------------------------
+
+            return Response({
+                "total_submissions": total_submissions,
+                "completion_rate": round(completion_rate, 2),
+                "average_time_to_complete": round(
+                    average_time, 2
+                ),
+                "field_distribution": field_distribution
+            })
 
     @action(detail=False, methods=["get"])
     def responses(self, request):
@@ -898,12 +1190,25 @@ class SubmissionViewSet(viewsets.ModelViewSet):
         # ==========================================================
         # 6. CREATE SUBMISSION
         # ==========================================================
+        submission_id = request.data.get("submission_id")
+        if not submission_id:
+            return Response(
+                {"error": "Submission ID is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        submission = Submission.objects.create(
-            form_version=form_version,
-            ip_address=request.META.get("REMOTE_ADDR"),
-            status="submitted"
+        submission = get_object_or_404(
+            Submission,
+            id=submission_id,
+            form_version=form_version
         )
+
+        if submission.status == "submitted":
+            return Response(
+                {"error": "This form has already been submitted"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
         # ==========================================================
         # 7. SAVE RESPONSE VALUES
         # ==========================================================
@@ -949,6 +1254,19 @@ class SubmissionViewSet(viewsets.ModelViewSet):
                 field=field,
                 value=str(value)
             )
+        # ==========================================================
+        # 8. COMPLETE SUBMISSION
+        # ==========================================================
+
+        submission.submitted_at = timezone.now()
+        submission.status = "submitted"
+
+        if submission.started_at:
+            submission.completion_time_seconds = (
+                submission.submitted_at - submission.started_at
+            ).total_seconds()
+
+        submission.save()
 
 
 
@@ -1019,6 +1337,26 @@ def public_form_by_uuid(request, uuid):
             })
 
         return Response(data)
+@api_view(["POST"])
+def start_public_form(request, uuid):
+
+    version = get_object_or_404(
+        FormVersion,
+        uuid=uuid,
+        is_published=True
+    )
+
+    submission = Submission.objects.create(
+        form_version=version,
+        started_at=timezone.now(),
+        ip_address=request.META.get("REMOTE_ADDR"),
+        status="in_progress"
+    )
+
+    return Response({
+        "submission_id": submission.id,
+        "started_at": submission.started_at
+    }, status=status.HTTP_201_CREATED)
 class LoginView(APIView):
     def post(self, request):
         username = request.data.get("username")
