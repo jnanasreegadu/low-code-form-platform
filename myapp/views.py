@@ -9,6 +9,7 @@ from rest_framework.response import Response
 from rest_framework import status
 import csv
 import json
+from django.core import signing
 from datetime import datetime
 from django.core.validators import validate_email
 from django.core.exceptions import ValidationError
@@ -16,7 +17,7 @@ from django.core.files.uploadedfile import UploadedFile
 from django.http import HttpResponse
 from django.contrib.auth.models import User
 from django.utils import timezone
-from django.db.models import Avg, Count
+from django.db.models import Avg, Count, Q
 from django.db.models.functions import TruncDate
 from django.utils.dateparse import parse_datetime
 from .models import (
@@ -333,6 +334,23 @@ class FormViewSet(viewsets.ModelViewSet):
         return Response({
             "message": "Form restored successfully"
         })
+    @action(detail=True, methods=["get"])
+    def versions(self, request, pk=None):
+
+        form = self.get_object()
+
+        versions = FormVersion.objects.filter(
+            form=form
+        ).order_by("version")
+
+        return Response([
+            {
+                "id": version.id,
+                "version": version.version,
+                "is_published": version.is_published
+            }
+            for version in versions
+        ])
 
     @action(detail=True, methods=["get"])
     def public(self, request, pk=None):
@@ -740,17 +758,149 @@ class SubmissionViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=["get"])
     def responses(self, request):
 
+        # ==========================================================
+        # 1. GET ONLY LOGGED-IN USER'S RESPONSES
+        # ==========================================================
+
         submissions = Submission.objects.filter(
             form_version__form__owner=request.user
         ).order_by("-submitted_at")
 
+
+        # ==========================================================
+        # 2. DATE RANGE FILTER
+        # ==========================================================
+
+        submitted_from = request.query_params.get("submitted_from")
+        submitted_to = request.query_params.get("submitted_to")
+
+        if submitted_from:
+            submissions = submissions.filter(
+                submitted_at__date__gte=submitted_from
+            )
+
+        if submitted_to:
+            submissions = submissions.filter(
+                submitted_at__date__lte=submitted_to
+            )
+
+
+        # ==========================================================
+        # 3. COMPLETION STATUS FILTER
+        # ==========================================================
+
+        completion_status = request.query_params.get("status")
+
+        if completion_status:
+
+            completion_status = completion_status.lower()
+
+            if completion_status == "completed":
+                submissions = submissions.filter(
+                    status="submitted"
+                )
+
+            elif completion_status == "in_progress":
+                submissions = submissions.filter(
+                    status="in_progress"
+                )
+
+
+        # ==========================================================
+        # 4. SPECIFIC FIELD VALUE FILTER
+        # Example:
+        # ?field=Department&value=IT
+        # ==========================================================
+
+        field_name = request.query_params.get("field")
+        field_value = request.query_params.get("value")
+
+        if field_name and field_value:
+
+            submissions = submissions.filter(
+                responsevalue__field__label__iexact=field_name,
+                responsevalue__value__iexact=field_value
+            ).distinct()
+
+
+        # ==========================================================
+        # 5. OPTIONAL TEXT SEARCH
+        # Searches submission ID and response values
+        # Example:
+        # ?search=105
+        # ?search=Janasree
+        # ==========================================================
+
+        search = request.query_params.get("search")
+
+        if search:
+
+            search_query = Q()
+
+            # Search by response ID
+            response_id = search.replace("RESP-", "").strip()
+
+            if response_id.isdigit():
+                search_query |= Q(id=int(response_id))
+
+            # Search inside submitted response values
+            search_query |= Q(
+                responsevalue__value__icontains=search
+            )
+
+            submissions = submissions.filter(
+                search_query
+            ).distinct()
+
+
+        # ==========================================================
+        # 6. PAGINATION
+        # Example:
+        # ?page=1&page_size=20
+        # ==========================================================
+
+        try:
+            page = int(
+                request.query_params.get("page", 1)
+            )
+        except ValueError:
+            page = 1
+
+        try:
+            page_size = int(
+                request.query_params.get("page_size", 20)
+            )
+        except ValueError:
+            page_size = 20
+
+        # Prevent very large requests
+        page_size = min(page_size, 100)
+
+        if page < 1:
+            page = 1
+
+
+        total_count = submissions.count()
+
+        start = (page - 1) * page_size
+        end = start + page_size
+
+        paginated_submissions = submissions[
+            start:end
+        ]
+
+
+        # ==========================================================
+        # 7. BUILD RESPONSE DATA
+        # ==========================================================
+
         data = []
 
-        for submission in submissions:
+        for submission in paginated_submissions:
 
             response_values = ResponseValue.objects.filter(
                 submission=submission
-            )
+            ).select_related("field")
 
             responses = []
 
@@ -758,7 +908,10 @@ class SubmissionViewSet(viewsets.ModelViewSet):
 
                 file_url = None
 
-                if response.field.field_type in ["file", "file upload"]:
+                if response.field.field_type in [
+                    "file",
+                    "file upload"
+                ]:
 
                     uploaded_file = UploadedFile.objects.filter(
                         submission=submission,
@@ -766,53 +919,272 @@ class SubmissionViewSet(viewsets.ModelViewSet):
                     ).first()
 
                     if uploaded_file:
+
+                        token = signing.dumps({
+                            "file_id": uploaded_file.id,
+                            "owner_id": request.user.id
+                        })
+
                         file_url = request.build_absolute_uri(
-                            uploaded_file.file.url
+                            f"/api/submissions/file/{token}/"
                         )
 
-                # IMPORTANT: outside file condition
                 responses.append({
                     "field": response.field.label,
                     "value": response.value,
                     "file_url": file_url,
                 })
 
-            # IMPORTANT: outside response loop
             data.append({
                 "submission_id": submission.id,
+                "response_id": f"RESP-{submission.id}",
                 "form_version": submission.form_version.version,
                 "submitted_at": submission.submitted_at,
+                "status": submission.status,
                 "responses": responses,
             })
 
-        return Response(data)
+
+        # ==========================================================
+        # 8. PAGINATION RESPONSE
+        # ==========================================================
+
+        total_pages = (
+            (total_count + page_size - 1)
+            // page_size
+        )
+
+        return Response({
+
+            "count": total_count,
+
+            "page": page,
+
+            "page_size": page_size,
+
+            "total_pages": total_pages,
+
+            "results": data
+
+        })
 
     @action(detail=False, methods=["get"])
     def export(self, request):
-        response = HttpResponse(content_type="text/csv")
-        response["Content-Disposition"] = 'attachment; filename="responses.csv"'
 
-        writer = csv.writer(response)
+        # Selected form version
+        version_id = request.query_params.get("form_version")
+        export_format = request.query_params.get("export", "csv").lower()
 
-        writer.writerow([
-            "Submission ID",
-            "Field",
-            "Answer",
-        ])
+        if not version_id:
+            return Response(
+                {"error": "form_version is required"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        submissions = Submission.objects.all()
+        # Check form version belongs to logged-in user
+        try:
+            form_version = FormVersion.objects.get(
+                id=version_id,
+                form__owner=request.user
+            )
+        except FormVersion.DoesNotExist:
+            return Response(
+                {"error": "Form version not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Get fields in correct order
+        fields = Field.objects.filter(
+            form_version=form_version
+        ).order_by("field_order")
+
+        # Get submitted responses
+        submissions = Submission.objects.filter(
+            form_version=form_version,
+            status="submitted"
+        ).order_by("id")
+
+        # ==========================================================
+        # BUILD RESPONSE DATA
+        # ==========================================================
+
+        export_data = []
 
         for submission in submissions:
-            values = ResponseValue.objects.filter(submission=submission)
 
-            for value in values:
-                writer.writerow([
-                    submission.id,
-                    value.field.label,
-                    value.value,
-                ])
+            response_values = ResponseValue.objects.filter(
+                submission=submission
+            ).select_related("field")
+
+            response_map = {}
+
+            for response_value in response_values:
+
+                field = response_value.field
+                value = response_value.value
+
+                # ======================================================
+                # FILE FIELD
+                # ======================================================
+
+                if field.field_type in ["file", "file upload"]:
+
+                    uploaded_file = UploadedFile.objects.filter(
+                        submission=submission,
+                        field=field
+                    ).first()
+
+                    if uploaded_file:
+
+                        token = signing.dumps({
+                            "file_id": uploaded_file.id,
+                            "owner_id": request.user.id,
+                        })
+
+                        value = request.build_absolute_uri(
+                            f"/api/submissions/file/{token}/"
+                        )
+
+                response_map[field.label] = value
+
+            export_data.append(response_map)
+
+        # ==========================================================
+        # JSON EXPORT
+        # ==========================================================
+
+        if export_format == "json":
+
+            response = HttpResponse(
+                json.dumps(export_data, indent=2),
+                content_type="application/json"
+            )
+
+            response["Content-Disposition"] = (
+                'attachment; filename="responses.json"'
+            )
+
+            return response
+
+        # ==========================================================
+        # CSV EXPORT
+        # ==========================================================
+
+        if export_format == "csv":
+
+            response = HttpResponse(
+                content_type="text/csv"
+            )
+
+            response["Content-Disposition"] = (
+                'attachment; filename="responses.csv"'
+            )
+
+            writer = csv.writer(response)
+
+            # Header row
+            writer.writerow([
+                field.label
+                for field in fields
+            ])
+
+            # Data rows
+            # Data rows
+            for submission_data in export_data:
+
+                row = []
+
+                for field in fields:
+
+                    value = submission_data.get(field.label, "")
+
+                    # Keep phone/mobile/contact numbers as text in Excel
+                    if (
+                        "phone" in field.label.lower()
+                        or "mobile" in field.label.lower()
+                        or "contact" in field.label.lower()
+                    ):
+                        if value:
+                            value = f'="{value}"'
+
+                    # Keep date values as text in Excel
+                    elif field.field_type == "date" and value:
+                        value = f'="{value}"'
+
+                    row.append(value)
+
+                writer.writerow(row)
+
+            return response
+
+        # ==========================================================
+        # INVALID FORMAT
+        # ==========================================================
+
+        return Response(
+            {
+                "error": "Invalid format. Use csv or json."
+            },
+            status=status.HTTP_400_BAD_REQUEST
+        )
+    @action(
+    detail=False,
+    methods=["get"],
+    url_path=r"file/(?P<token>[^/]+)"
+)
+    def download_file(self, request, token=None):
+
+        try:
+
+            data = signing.loads(
+                token,
+                max_age=3600
+            )
+
+            file_id = data.get("file_id")
+            owner_id = data.get("owner_id")
+
+        except signing.BadSignature:
+
+            return Response(
+                {"error": "Invalid or expired file URL"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        try:
+
+            uploaded_file = UploadedFile.objects.select_related(
+                "submission__form_version__form"
+            ).get(
+                id=file_id
+            )
+
+        except UploadedFile.DoesNotExist:
+
+            return Response(
+                {"error": "File not found"},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Check that the signed URL belongs to the form owner
+        if uploaded_file.submission.form_version.form.owner_id != owner_id:
+
+            return Response(
+                {"error": "Access denied"},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        response = HttpResponse(
+            uploaded_file.file.open("rb").read(),
+            content_type="application/octet-stream"
+        )
+
+        response["Content-Disposition"] = (
+            f'attachment; filename="{uploaded_file.file.name.split("/")[-1]}"'
+        )
 
         return response
+    
     @action(
     detail=False,
     methods=["post"],
@@ -1380,6 +1752,8 @@ class RegisterView(APIView):
 
     def post(self, request):
         username = request.data.get("username")
+        name = request.data.get("name")
+        email = request.data.get("email")
         password = request.data.get("password")
 
         if not username or not password:
@@ -1394,12 +1768,48 @@ class RegisterView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        if email and User.objects.filter(email=email).exists():
+            return Response(
+                {"error": "Email already exists"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         user = User.objects.create_user(
             username=username,
-            password=password
+            password=password,
+            email=email or ""
         )
+
+        if name:
+            name_parts = name.strip().split(" ", 1)
+
+            user.first_name = name_parts[0]
+
+            if len(name_parts) > 1:
+                user.last_name = name_parts[1]
+
+        user.save()
 
         return Response(
             {"message": "Account created successfully"},
             status=status.HTTP_201_CREATED
         )
+class ProfileView(APIView):
+
+    def get(self, request):
+
+        if not request.user.is_authenticated:
+            return Response(
+                {"error": "Authentication required"},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+
+        user = request.user
+
+        full_name = f"{user.first_name} {user.last_name}".strip()
+
+        return Response({
+            "username": user.username,
+            "name": full_name,
+            "email": user.email
+        })

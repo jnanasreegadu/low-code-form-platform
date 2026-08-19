@@ -3,12 +3,16 @@ from .models import Form, Field,FormVersion
 from .models import ConditionalRule
 
 
-
+class ConditionalRuleSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ConditionalRule
+        fields = "__all__"
 
 class FormSerializer(serializers.ModelSerializer):
 
     latest_version = serializers.SerializerMethodField()
     latest_uuid = serializers.SerializerMethodField()
+    conditional_rules = serializers.SerializerMethodField()
 
     class Meta:
         model = Form
@@ -41,6 +45,48 @@ class FormSerializer(serializers.ModelSerializer):
             return str(latest.uuid)
 
         return None
+
+    def get_conditional_rules(self, obj):
+
+        latest_version = (
+            FormVersion.objects
+            .filter(
+                form=obj,
+                is_published=True
+            )
+            .order_by("-version")
+            .first()
+        )
+
+        if not latest_version:
+            return []
+
+        rules = ConditionalRule.objects.filter(
+            source_field__form_version=latest_version,
+            target_field__form_version=latest_version
+        ).select_related(
+            "source_field",
+            "target_field"
+        )
+
+        return [
+            {
+                "id": rule.id,
+
+                "source_field_id": rule.source_field.id,
+                "source_field_label": rule.source_field.label,
+
+                "operator": rule.operator,
+
+                "expected_value": rule.expected_value,
+
+                "target_field_id": rule.target_field.id,
+                "target_field_label": rule.target_field.label,
+
+                "action": rule.action,
+            }
+            for rule in rules
+        ]
 
 class FieldSerializer(serializers.ModelSerializer):
     class Meta:
@@ -76,7 +122,3 @@ class SubmissionSerializer(serializers.ModelSerializer):
             )
 
         return submission
-class ConditionalRuleSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ConditionalRule
-        fields = "__all__"

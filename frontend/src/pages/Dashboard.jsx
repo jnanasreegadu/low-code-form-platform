@@ -6,14 +6,16 @@ import { Link, useNavigate } from "react-router-dom";
 import DashboardPieChart from "../components/DashboardPieChart";
 import { motion } from "framer-motion";
 import { Archive } from "lucide-react";
-import { Share2 } from "lucide-react";
+
 import Loader from "../components/Loader";
 import {
   Eye,
   Pencil,
   Trash2,
   RotateCcw,
+  Share2,
   Send,
+  User,
 } from "lucide-react";
 function Dashboard() {
   const [forms, setForms] = useState([]);
@@ -21,7 +23,22 @@ function Dashboard() {
   const [responseCount, setResponseCount] = useState(0);
 
   const [loading, setLoading] = useState(true);
+  const [showProfile, setShowProfile] = useState(false);
+  const [profile, setProfile] = useState(null);
+  const [selectedRules, setSelectedRules] = useState([]);
+  const [selectedRuleForm, setSelectedRuleForm] = useState(null);
+  const [rulesLoading, setRulesLoading] = useState(false);
   const navigate = useNavigate();
+  useEffect(() => {
+    api
+      .get("profile/")
+      .then((response) => {
+        setProfile(response.data);
+      })
+      .catch((err) => {
+        console.log("PROFILE ERROR:", err);
+      });
+  }, []);
   useEffect(() => {
 
     Promise.all([
@@ -54,6 +71,29 @@ const logout = () => {
   const draftForms = forms.filter(
     (form) => form.status === "draft"
   ).length;
+  const viewRules = async (form) => {
+    try {
+      setRulesLoading(true);
+  
+      const response = await api.get(`forms/${form.id}/`);
+  
+      const data = response.data;
+      console.log("FORM DATA:", data);
+      console.log("CONDITIONAL RULES:", data.conditional_rules);
+  
+      setSelectedRuleForm(data);
+  
+      setSelectedRules(
+        data.conditional_rules || []
+      );
+  
+    } catch (error) {
+      console.log("RULES ERROR:", error);
+      alert("Failed to load conditional rules");
+    } finally {
+      setRulesLoading(false);
+    }
+  };
   const deleteForm = async (id) => {
     const confirmDelete = window.confirm(
       "Are you sure you want to delete this form"
@@ -150,13 +190,115 @@ const logout = () => {
   </button>
 </div>
 
+<div className="ff-profile-container">
+
   <button
-  className="profile"
-  onClick={logout}
->
-  Logout
-</button>
+    className="ff-profile-btn"
+    onClick={() => setShowProfile(!showProfile)}
+  >
+    <User size={18} />
+    Profile
+  </button>
+
+  {showProfile && (
+    <div className="ff-profile-card">
+
+      <h3>Profile</h3>
+
+      {profile ? (
+        <div className="ff-user-details">
+
+          <div className="ff-detail">
+            <span>Username</span>
+            <strong>{profile.username}</strong>
+          </div>
+
+          <div className="ff-detail">
+            <span>Name</span>
+            <strong>{profile.name || "Not provided"}</strong>
+          </div>
+
+          <div className="ff-detail">
+            <span>Email</span>
+            <strong>{profile.email || "Not provided"}</strong>
+          </div>
+
+        </div>
+      ) : (
+        <p className="ff-loading">Loading...</p>
+      )}
+
+      <div className="ff-divider"></div>
+
+      <button
+        className="ff-profile-link"
+        onClick={() => {
+          setShowProfile(false);
+          navigate("/forms");
+        }}
+      >
+        My Forms
+      </button>
+
+      <button
+        className="ff-profile-link"
+        onClick={() => {
+          setShowProfile(false);
+          navigate("/responses");
+        }}
+      >
+        Responses
+      </button>
+
+      <button
+        className="ff-profile-link"
+        onClick={() => {
+          setShowProfile(false);
+          navigate("/analytics");
+        }}
+      >
+        Analytics
+      </button>
+
+      <div className="ff-divider"></div>
+
+      <button
+        className="ff-logout"
+        onClick={logout}
+      >
+        Logout
+      </button>
+
+    </div>
+  )}
+
+</div>
 </motion.nav>
+      {/* Create Form Button */}
+      <div className="dashboard-actions">
+
+      <motion.button
+  className="create-form-dashboard-btn"
+  onClick={() => navigate("/create")}
+  initial={{ opacity: 0, y: -15, scale: 0.95 }}
+  animate={{ opacity: 1, y: 0, scale: 1 }}
+  whileHover={{
+    scale: 1.05,
+    y: -3,
+  }}
+  whileTap={{
+    scale: 0.96,
+  }}
+  transition={{
+    duration: 0.35,
+    ease: "easeOut",
+  }}
+>
+  + Create Form
+</motion.button>
+
+      </div>
+
 
       {/* Cards */}
       <div className="content">
@@ -168,6 +310,7 @@ const logout = () => {
   <GlassCard
     title="Total Forms"
     value={forms.length}
+    className="total-forms-card"
   />
 </motion.div>
 
@@ -242,6 +385,13 @@ const logout = () => {
                 </td>
                   <td className="action-buttons">
 
+                  <button
+  className="rules-btn"
+  onClick={() => viewRules(form)}
+  title="View Conditional Rules"
+>
+  Rules
+</button>
   <Link to={`/view/${form.id}`}>
     <button className="view-btn">
       <Eye size={16}/>
@@ -262,6 +412,7 @@ const logout = () => {
       >
         <Archive size={16}/>
       </button>
+      
       <button
       className="delete-btn"
       onClick={() => deleteForm(form.id)}
@@ -277,9 +428,10 @@ onClick={()=>{
 
 alert("Link Copied");
 }}
+title="Share Form"
 >
 
-<Share2 size={18}/>
+<Share2 size={18} strokeWidth={2.2}/>
 
 </button>
     </>
@@ -313,8 +465,9 @@ alert("Link Copied");
     <button
       className="restore-btn"
       onClick={() => restoreForm(form.id)}
+      title="Restore Form"
     >
-      <RotateCcw size={16}/>
+      <RotateCcw size={16} strokeWidth={2.2}/>
     </button>
     <button
     className="delete-btn"
@@ -331,11 +484,15 @@ alert("Link Copied");
             </tbody>
           </table>
         </motion.div>
+        <div className="dashboard-right">
 
-        <motion.div className="stats-panel"
-        initial={{ opacity: 0, x: 80 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 0.5, duration: 0.7 }}>
+<motion.div
+  className="stats-panel"
+  initial={{ opacity: 0, x: 80 }}
+  animate={{ opacity: 1, x: 0 }}
+  transition={{ delay: 0.5, duration: 0.7 }}
+>
+
   <h2>Quick Stats</h2>
 
   <DashboardPieChart
@@ -362,9 +519,126 @@ alert("Link Copied");
     <span>Total Responses</span>
     <strong>{responseCount}</strong>
   </div>
+
 </motion.div>
-        </div>
+
+
+{selectedRuleForm && (
+  <motion.div
+    className="conditional-rules-panel"
+    initial={{ opacity: 0, y: 30 }}
+    animate={{ opacity: 1, y: 0 }}
+  >
+
+    <div className="rules-header">
+
+      <div>
+        <h2>Conditional Rules</h2>
+
+        <p>
+          {selectedRuleForm.title}
+        </p>
       </div>
+
+      <button
+        className="close-rules-btn"
+        onClick={() => {
+          setSelectedRuleForm(null);
+          setSelectedRules([]);
+        }}
+      >
+        ×
+      </button>
+
+    </div>
+
+
+    {rulesLoading ? (
+
+      <p className="rules-message">
+        Loading rules...
+      </p>
+
+    ) : selectedRules.length === 0 ? (
+
+      <div className="no-rules">
+
+        <h3>No Conditional Rules</h3>
+
+        <p>
+          This form does not contain any conditional rules.
+        </p>
+
+      </div>
+
+    ) : (
+
+      <div className="rules-list">
+
+        {selectedRules.map((rule, index) => {
+
+          return (
+            <motion.div
+              className="rule-card"
+              key={rule.id || index}
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{
+                delay: index * 0.08
+              }}
+            >
+
+              <div className="rule-condition">
+
+                <span className="rule-label">
+                  IF
+                </span>
+
+                <strong>
+                  {rule.source_field_label}
+                </strong>
+
+                <span className="rule-operator">
+                  {rule.operator}
+                </span>
+
+                <span className="rule-value">
+                  {rule.expected_value}
+                </span>
+
+              </div>
+
+
+              <div className="rule-arrow">
+                ↓
+              </div>
+
+
+              <div className="rule-action">
+
+                <span className="rule-label">
+                  {rule.action?.toUpperCase()}
+                </span>
+
+                <strong>
+                  {rule.target_field_label}
+                </strong>
+
+              </div>
+
+            </motion.div>
+          );
+        })}
+
+      </div>
+
+    )}
+
+     </motion.div>
+ )}
+</div>
+    </div>
+  </div>
   );
 }
 
