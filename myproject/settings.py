@@ -158,4 +158,7 @@ EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
     EMAIL_HOST_USER or "noreply@low-code-form-platform.com"
-)
+)
+
+EMAIL_TIMEOUT = 3
+

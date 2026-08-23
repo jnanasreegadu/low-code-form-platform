@@ -14,6 +14,8 @@ import secrets
 import uuid
 import os
 import re
+import threading
+
 from datetime import timedelta
 from django.utils import timezone
 from django.views.decorators.csrf import csrf_exempt
@@ -2936,6 +2938,24 @@ def _generate_otp_code():
     return f"{random.randint(0, 999999):06d}"
 
 
+def _send_otp_email_async(email, code, submission_id):
+
+    try:
+        send_mail(
+            subject="Your FormFlow verification code",
+            message=(
+                f"Your verification code is: {code}\n\n"
+                "This code expires in 5 minutes.\n\n"
+                "If you did not request this, you can ignore this email."
+            ),
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None) or "noreply@formflow.app",
+            recipient_list=[email],
+            fail_silently=True,
+        )
+    except Exception as e:
+        logger.warning(f"Async OTP email delivery note for submission {submission_id}, email {email}: {e}")
+
+
 class RespondentSendOTPView(APIView):
     authentication_classes = []
     permission_classes = [permissions.AllowAny]
@@ -2968,25 +2988,15 @@ class RespondentSendOTPView(APIView):
             expires_at=timezone.now() + timedelta(minutes=5),
         )
 
-        try:
-            send_mail(
-                subject="Your FormFlow verification code",
-                message=(
-                    f"Your verification code is: {code}\n\n"
-                    "This code expires in 5 minutes.\n\n"
-                    "If you did not request this, you can ignore this email."
-                ),
-                from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None) or "noreply@formflow.app",
-                recipient_list=[email],
-                fail_silently=True,
-            )
-        except Exception as e:
-            logger.warning(
-                f"OTP EMAIL WARNING for submission {submission.id}, "
-                f"email {email}: {e}"
-            )
+        # Non-blocking async thread dispatch so Gunicorn workers never block or time out
+        threading.Thread(
+            target=_send_otp_email_async,
+            args=(email, code, submission.id),
+            daemon=True
+        ).start()
 
         return Response({"message": "Verification code sent.", "otp": code})
+
 
 
 
