@@ -1493,10 +1493,6 @@ th {
     cursor: not-allowed;
   }
 
-/* =========================================================
-   RESPONSIVE BREAKPOINTS FOR ALL DEVICES
-   ========================================================= */
-
 @media (max-width: 1024px) {
   .responses-page {
     margin-left: 0 !important;
@@ -1525,4 +1521,4 @@ th {
   .date-filter-controls {
     grid-template-columns: 1fr !important;
   }
-}
+}
