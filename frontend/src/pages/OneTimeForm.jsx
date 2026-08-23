@@ -548,15 +548,17 @@ function OneTimeForm() {
                   )}
 
                   {isCheckbox && (
-                    <div>
+                    <label className="checkbox-row" htmlFor={`onetime-checkbox-${field.id}`}>
                       <input
+                        id={`onetime-checkbox-${field.id}`}
                         type="checkbox"
                         checked={!!responses[field.id]}
                         onChange={(e) => handleChange(field.id, e.target.checked)}
                       />
-                      <span> Accept Terms</span>
-                    </div>
+                      <span>{field.placeholder || "Confirm / Accept"}</span>
+                    </label>
                   )}
+
 
                   {isRating && (
                     <select

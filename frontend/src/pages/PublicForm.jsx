@@ -676,16 +676,18 @@ function PublicForm() {
                 )}
 
                 {isCheckbox && (
-                  <div className="checkbox-row">
+                  <label className="checkbox-row" htmlFor={`checkbox-${field.id}`}>
                     <input
+                      id={`checkbox-${field.id}`}
                       type="checkbox"
                       disabled={!respondentVerified}
                       checked={!!responses[field.id]}
                       onChange={(e) => handleChange(field.id, e.target.checked)}
                     />
-                    <span> Accept Terms & Conditions</span>
-                  </div>
+                    <span>{field.placeholder || "Confirm / Accept"}</span>
+                  </label>
                 )}
+
 
                 {isRating && (
                   <select
