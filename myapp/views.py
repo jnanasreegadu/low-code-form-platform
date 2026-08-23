@@ -1511,10 +1511,11 @@ def send_submission_confirmation_email(submission):
         send_mail(
             subject=subject,
             message=message,
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None) or "noreply@formflow.app",
+            from_email=getattr(settings, "EMAIL_HOST_USER", "jnanasreegadu23@gmail.com"),
             recipient_list=[recipient],
             fail_silently=True,
         )
+
 
 
         return True
@@ -2965,9 +2966,10 @@ def _send_otp_email_async(email, code, submission_id):
                 "This code expires in 5 minutes.\n\n"
                 "If you did not request this, you can ignore this email."
             ),
-            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None) or "noreply@formflow.app",
+            from_email=getattr(settings, "EMAIL_HOST_USER", "jnanasreegadu23@gmail.com"),
             recipient_list=[email],
             fail_silently=True,
+
         )
     except Exception as e:
         logger.warning(f"Async OTP email delivery note for submission {submission_id}, email {email}: {e}")
