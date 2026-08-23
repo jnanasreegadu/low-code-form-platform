@@ -2741,25 +2741,40 @@ GOOGLE_CLIENT_ID = "649818078001-6v5ie1iv4khakjvrcmvjb8a0vckjao0i.apps.googleuse
 def _verify_google_id_token(token):
     """
     Shared helper: verifies a Google ID token server-side and
-    returns (email, name). Raises ValueError if the token has
-    no email. This is the single source of truth for Google
-    token verification - both admin login (GoogleLoginView) and
-    respondent identity verification (RespondentGoogleVerifyView)
-    call this, so there is only one auth implementation.
+    returns (email, name). Supports google-auth library and fallback
+    to official Google Tokeninfo REST endpoint.
     """
-    idinfo = id_token.verify_oauth2_token(
-        token,
-        google_requests.Request(),
-        GOOGLE_CLIENT_ID
-    )
+    try:
+        if id_token and google_requests:
+            idinfo = id_token.verify_oauth2_token(
+                token,
+                google_requests.Request(),
+                GOOGLE_CLIENT_ID
+            )
+            email = idinfo.get("email")
+            name = idinfo.get("name", "")
+            if email:
+                return email, name
+    except Exception as exc:
+        logger.warning(f"google.oauth2 verification error: {exc}")
 
-    email = idinfo.get("email")
-    name = idinfo.get("name", "")
+    # Fallback to official Google tokeninfo API endpoint
+    try:
+        resp = requests.get(
+            f"https://oauth2.googleapis.com/tokeninfo?id_token={token}",
+            timeout=8
+        )
+        if resp.status_code == 200:
+            data = resp.json()
+            email = data.get("email")
+            name = data.get("name", "")
+            if email:
+                return email, name
+    except Exception as exc:
+        logger.error(f"Google Tokeninfo API error: {exc}")
 
-    if not email:
-        raise ValueError("Email not found in Google account")
+    raise ValueError("Invalid Google token or email missing")
 
-    return email, name
 
 
 class GoogleLoginView(APIView):
