@@ -1284,7 +1284,8 @@
 
   /* IMPORTANT */
   max-height: 90vh;
-  overflow: hidden;
+  overflow-y: auto;
+
 
   background:
     radial-gradient(

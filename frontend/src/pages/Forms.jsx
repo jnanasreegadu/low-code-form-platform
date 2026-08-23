@@ -63,13 +63,15 @@ function Forms() {
         }
       );
   
-      console.log("ONE TIME LINK:", response.data);
-  
-      setOneTimeLink(response.data.link);
-  
+      const rawLink = response.data?.link || "";
+      const token = response.data?.token || (rawLink.includes("/one-time/") ? rawLink.split("/one-time/")[1].replace("/", "") : "");
+      const finalLink = token ? `${window.location.origin}/one-time/${token}` : rawLink;
+      setOneTimeLink(finalLink);
+
       setOneTimeExpiresAt(
         response.data.expires_at
       );
+
   
     } catch (error) {
   
