@@ -7,7 +7,6 @@ import "../styles/Identityselector.css";
 
 function IdentitySelector({ submissionId, onVerified }) {
   const [googleEmail, setGoogleEmail] = useState(null);
-  const [customEmail, setCustomEmail] = useState("");
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState("");
 
@@ -30,22 +29,8 @@ function IdentitySelector({ submissionId, onVerified }) {
     }
   };
 
-  const handleCustomEmailSubmit = (e) => {
-    e.preventDefault();
-    if (!customEmail || !customEmail.includes("@")) {
-      setError("Please enter a valid email address.");
-      return;
-    }
-    setError("");
-    const userEmail = customEmail.trim().toLowerCase();
-    setGoogleEmail(userEmail);
-    setVerified(true);
-    onVerified(userEmail);
-  };
-
   const switchAccount = () => {
     setGoogleEmail(null);
-    setCustomEmail("");
     setVerified(false);
     setError("");
     if (onVerified) onVerified(null);
@@ -54,56 +39,17 @@ function IdentitySelector({ submissionId, onVerified }) {
   return (
     <div className="identity-selector">
       <div className="identity-header">
-        <Mail size={16} /> Identity & Sign-In
+        <Mail size={16} /> Sign In with Google
       </div>
 
       {error && <div className="identity-error">{error}</div>}
 
       {!googleEmail && (
-        <div className="identity-auth-box" style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
-          <div className="identity-google-wrapper">
-            <GoogleLogin
-              onSuccess={handleGoogleSuccess}
-              onError={() => setError("Google sign-in failed.")}
-            />
-          </div>
-
-          <div style={{ textAlign: "center", color: "#64748b", fontSize: "12px", fontWeight: "600" }}>
-            OR ENTER EMAIL
-          </div>
-
-          <form onSubmit={handleCustomEmailSubmit} style={{ display: "flex", gap: "8px" }}>
-            <input
-              type="email"
-              placeholder="e.g. name@example.com"
-              value={customEmail}
-              onChange={(e) => setCustomEmail(e.target.value)}
-              style={{
-                flex: 1,
-                padding: "10px 14px",
-                borderRadius: "8px",
-                border: "1px solid rgba(255,255,255,0.2)",
-                background: "rgba(255,255,255,0.05)",
-                color: "#fff",
-                fontSize: "14px",
-              }}
-              required
-            />
-            <button
-              type="submit"
-              style={{
-                padding: "10px 18px",
-                borderRadius: "8px",
-                border: "none",
-                background: "#00e5ff",
-                color: "#0f172a",
-                fontWeight: "600",
-                cursor: "pointer",
-              }}
-            >
-              Continue
-            </button>
-          </form>
+        <div className="identity-google-wrapper" style={{ marginTop: "12px", display: "flex", justifyContent: "center" }}>
+          <GoogleLogin
+            onSuccess={handleGoogleSuccess}
+            onError={() => setError("Google sign-in failed. Please try again.")}
+          />
         </div>
       )}
 
@@ -130,12 +76,10 @@ function IdentitySelector({ submissionId, onVerified }) {
       )}
 
       <div className="identity-help-text">
-        Your email will be associated with this response.
+        Sign in with Google to fill out and submit this form.
       </div>
     </div>
   );
 }
-
-
 
 export default IdentitySelector;

@@ -92,13 +92,15 @@ class FormViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         auto_publish_due_scheduled_forms()
 
-        if self.action == "public":
+        if self.action in ["public", "retrieve"] and not self.request.user.is_authenticated:
             return Form.objects.all()
 
         if not self.request.user.is_authenticated:
             return Form.objects.none()
 
-        return Form.objects.filter(owner=self.request.user)
+        return Form.objects.filter(owner=self.request.user).order_by("-created_at")
+
+
 
     def create(self, request):
         data = request.data
@@ -426,14 +428,33 @@ class FormViewSet(viewsets.ModelViewSet):
         # 6. DRAFT FORM
         # =====================================================
 
-        return Response(
-            FormSerializer(form).data,
-            status=status.HTTP_200_OK
+    @action(detail=True, methods=["post"])
+    def duplicate(self, request, pk=None):
+        original_form = self.get_object()
+
+        new_form = Form.objects.create(
+            owner=request.user,
+            title=f"{original_form.title} (Copy)",
+            description=original_form.description,
+            status="draft",
+            Fields=original_form.Fields,
+            limit_one_response_per_email=original_form.limit_one_response_per_email,
         )
 
+        FormVersion.objects.create(
+            form=new_form,
+            version=1,
+            is_published=False
+        )
+
+        serialized = FormSerializer(new_form).data
+        save_form_to_mongo(dict(serialized))
+
+        return Response(serialized, status=status.HTTP_201_CREATED)
 
     @action(detail=True, methods=["post"])
     def publish(self, request, pk=None):
+
 
         form = self.get_object()
 
