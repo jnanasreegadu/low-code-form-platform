@@ -42,7 +42,9 @@ from django.conf import settings
 import random
 
 from .models import OTPVerification   # add to existing models import block
+from .mongo import save_form_to_mongo, save_submission_to_mongo, save_otp_to_mongo
 import logging
+
 import requests
 
 logger = logging.getLogger(__name__)
@@ -183,10 +185,13 @@ class FormViewSet(viewsets.ModelViewSet):
             )
 
         # IMPORTANT: return must be OUTSIDE the loop
+        form_data = FormSerializer(form).data
+        save_form_to_mongo(dict(form_data))
         return Response(
-            FormSerializer(form).data,
+            form_data,
             status=status.HTTP_201_CREATED,
         )
+
     def update(self, request, *args, **kwargs):
 
         print("========== UPDATE API HIT ==========")
@@ -1506,10 +1511,11 @@ def send_submission_confirmation_email(submission):
         send_mail(
             subject=subject,
             message=message,
-            from_email=settings.DEFAULT_FROM_EMAIL,
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None) or "noreply@formflow.app",
             recipient_list=[recipient],
-            fail_silently=False,
+            fail_silently=True,
         )
+
 
         return True
 
@@ -2616,7 +2622,18 @@ class SubmissionViewSet(viewsets.ModelViewSet):
             ).total_seconds()
 
         submission.save()
+
+        save_submission_to_mongo({
+            "id": submission.id,
+            "form_version_id": submission.form_version.id,
+            "status": submission.status,
+            "submitted_at": submission.submitted_at.isoformat() if submission.submitted_at else None,
+            "respondent_email": getattr(submission, "respondent_email", None),
+            "ip_address": submission.ip_address,
+        })
+
         # Mark one-time link as used
+
         one_time_link = OneTimeLink.objects.filter(
             submission=submission
         ).first()
@@ -2987,6 +3004,14 @@ class RespondentSendOTPView(APIView):
             code=code,
             expires_at=timezone.now() + timedelta(minutes=5),
         )
+
+        save_otp_to_mongo({
+            "submission_id": submission.id,
+            "email": email,
+            "code": code,
+            "created_at": timezone.now().isoformat()
+        })
+
 
         # Non-blocking async thread dispatch so Gunicorn workers never block or time out
         threading.Thread(
