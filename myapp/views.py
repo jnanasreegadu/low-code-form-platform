@@ -74,7 +74,8 @@ def auto_publish_due_scheduled_forms():
             scheduled_publish_at__lte=now
         ).update(status="published")
     except Exception as e:
-        logger.error(f"Error auto-publishing scheduled forms: {e}")
+        logger.warning(f"Note on auto-publishing scheduled forms: {e}")
+
 
 
 class FormViewSet(viewsets.ModelViewSet):
