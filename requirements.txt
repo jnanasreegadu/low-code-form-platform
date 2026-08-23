@@ -6,3 +6,7 @@ gunicorn==26.0.0
 packaging==26.3
 sqlparse==0.5.5
 tzdata==2026.3
+<<<<<<< HEAD
+=======
+requests==2.34.2
+>>>>>>> Jnanasree

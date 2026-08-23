@@ -1,0 +1,301 @@
+/* ==========================================================
+   IDENTITY SELECTOR
+   Matches FormFlow dark/cyan theme (see PublicForm.css)
+========================================================== */
+
+.identity-selector {
+    margin-bottom: 24px;
+    padding: 20px 22px;
+  
+    background:
+      linear-gradient(
+        145deg,
+        rgba(15, 31, 48, 0.98),
+        rgba(10, 23, 37, 0.98)
+      );
+  
+    border: 1px solid rgba(41, 182, 246, 0.35);
+    border-radius: 15px;
+  
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  }
+  
+  .identity-header {
+    font-size: 16px;
+    font-weight: 700;
+    color: #4cc9f0;
+    margin-bottom: 14px;
+  }
+  
+  
+  /* ==========================================================
+     GOOGLE BUTTON WRAPPER
+  ========================================================== */
+  
+  .identity-google-wrapper {
+    display: flex;
+    justify-content: center;
+    padding: 6px 0 2px;
+  }
+  
+  
+  /* ==========================================================
+     SELECTED ACCOUNT
+  ========================================================== */
+  
+  .identity-account {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  
+  .identity-email-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  
+    padding: 12px 16px;
+  
+    background: #2c2f36;
+    border: 1px solid #2d9cdb;
+    border-radius: 10px;
+  }
+  
+  .identity-email-row span {
+    color: #f5f7fa;
+    font-size: 14px;
+    font-weight: 600;
+  
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  
+  .identity-switch-btn {
+    flex-shrink: 0;
+  
+    background: transparent;
+    border: 1px solid rgba(41, 182, 246, 0.45);
+    border-radius: 7px;
+  
+    padding: 7px 12px;
+  
+    color: #4cc9f0;
+    font-size: 12px;
+    font-weight: 600;
+  
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease;
+  }
+  
+  .identity-switch-btn:hover {
+    background: rgba(41, 182, 246, 0.1);
+    border-color: #4cc9f0;
+  }
+  
+  
+  /* ==========================================================
+     SEND OTP BUTTON
+  ========================================================== */
+  
+  .identity-send-otp-btn {
+    width: 100%;
+    padding: 12px;
+  
+    border: none;
+    border-radius: 8px;
+  
+    background: #2d9cdb;
+    color: white;
+  
+    font-size: 14px;
+    font-weight: 600;
+  
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  
+  .identity-send-otp-btn:hover:not(:disabled) {
+    background: #1b7ec8;
+  }
+  
+  .identity-send-otp-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  
+  /* ==========================================================
+     OTP INPUT ROW
+  ========================================================== */
+  
+  .identity-otp-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  
+  .identity-otp-row input {
+    flex: 1;
+    min-width: 140px;
+  
+    padding: 11px 14px;
+  
+    border: 1px solid #2d9cdb;
+    border-radius: 8px;
+  
+    background: #2c2f36;
+    color: white;
+  
+    font-size: 15px;
+    letter-spacing: 3px;
+    text-align: center;
+  }
+  
+  .identity-otp-row input:focus {
+    outline: none;
+    border-color: #4cc9f0;
+    box-shadow: 0 0 0 3px rgba(76, 201, 240, 0.15);
+  }
+  
+  .identity-verify-btn {
+    padding: 11px 18px;
+  
+    border: none;
+    border-radius: 8px;
+  
+    background: #18d66b;
+    color: #06210f;
+  
+    font-size: 14px;
+    font-weight: 700;
+  
+    cursor: pointer;
+    transition: background 0.2s ease;
+    white-space: nowrap;
+  }
+  
+  .identity-verify-btn:hover:not(:disabled) {
+    background: #12b95b;
+  }
+  
+  .identity-verify-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .identity-resend-btn {
+    padding: 11px 14px;
+  
+    border: 1px solid rgba(41, 182, 246, 0.45);
+    border-radius: 8px;
+  
+    background: transparent;
+    color: #9aa9bb;
+  
+    font-size: 13px;
+    font-weight: 600;
+  
+    cursor: pointer;
+    transition: border-color 0.2s ease, color 0.2s ease;
+    white-space: nowrap;
+  }
+  
+  .identity-resend-btn:hover:not(:disabled) {
+    border-color: #4cc9f0;
+    color: #4cc9f0;
+  }
+  
+  .identity-resend-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  
+  /* ==========================================================
+     VERIFIED STATE
+  ========================================================== */
+  
+  .identity-verified-note {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    width: fit-content;
+  
+    padding: 9px 15px;
+  
+    border-radius: 8px;
+  
+    background: rgba(24, 214, 107, 0.1);
+    border: 1px solid rgba(24, 214, 107, 0.35);
+  
+    color: #18d66b;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  
+  
+  /* ==========================================================
+     ERROR
+  ========================================================== */
+  
+  .identity-error {
+    margin-bottom: 12px;
+    padding: 10px 14px;
+  
+    border-radius: 8px;
+  
+    background: #fdecea;
+    color: #b3261e;
+    border: 1px solid #f5c2c0;
+  
+    font-size: 13px;
+    font-weight: 500;
+  }
+  
+  
+  /* ==========================================================
+     HELP TEXT
+  ========================================================== */
+  
+  .identity-help-text {
+    margin-top: 14px;
+    color: #718397;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  
+  
+  /* ==========================================================
+     MOBILE
+  ========================================================== */
+  
+  @media (max-width: 650px) {
+  
+    .identity-selector {
+      padding: 16px 16px;
+    }
+  
+    .identity-email-row {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 10px;
+    }
+  
+    .identity-switch-btn {
+      align-self: flex-end;
+    }
+  
+    .identity-otp-row {
+      flex-direction: column;
+      align-items: stretch;
+    }
+  
+    .identity-verify-btn,
+    .identity-resend-btn {
+      width: 100%;
+    }
+  
+  }

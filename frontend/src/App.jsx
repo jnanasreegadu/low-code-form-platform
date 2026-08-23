@@ -1,36 +1,119 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+
 import Login from "./pages/Login";
+import Register from "./pages/Register";
+import Home from "./pages/Home";
 import Dashboard from "./pages/Dashboard";
 import Forms from "./pages/Forms";
 import Responses from "./pages/Responses";
 import CreateForm from "./pages/CreateForm";
 import ViewForm from "./pages/ViewForm";
 import EditForm from "./pages/EditForm";
-import ProtectedRoute from "./components/ProtectedRoute";
+import Analytics from "./pages/Analytics";
 import PublicForm from "./pages/PublicForm";
-import Register from "./pages/Register";
+import OneTimeForm from "./pages/OneTimeForm";
+
+import ProtectedRoute from "./components/ProtectedRoute";
+
 function App() {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={ <ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/forms" element={<ProtectedRoute><Forms /></ProtectedRoute>} />
-        <Route path="/responses" element={ <ProtectedRoute><Responses /></ProtectedRoute>} />
-        <Route path="/create" element={ <ProtectedRoute><CreateForm /></ProtectedRoute>} />
-        <Route path="/edit/:id" element={ <ProtectedRoute><EditForm /></ProtectedRoute>} />
-        <Route path="/login" element={<Login/>}/>
+
+        {/* ================= PUBLIC ================= */}
+
+        {/* Home Page */}
+        <Route path="/" element={<Home />} />
+
+        {/* Login */}
+        <Route path="/login" element={<Login />} />
+
+        {/* Register */}
+        <Route path="/register" element={<Register />} />
+
+        {/* Public Form */}
         <Route
-  path="/register"
-  element={<Register />}
-/>
+          path="/form/:uuid"
+          element={<PublicForm />}
+        />
+
+
+        {/* ================= PROTECTED ================= */}
+
+        {/* Dashboard */}
         <Route
-  path="/form/:uuid"
-  element={<PublicForm />}
-/>
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Forms */}
         <Route
-  path="/view/:id"
-  element={<ViewForm />}
-/>
+          path="/forms"
+          element={
+            <ProtectedRoute>
+              <Forms />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Create Form */}
+        <Route
+          path="/create"
+          element={
+            <ProtectedRoute>
+              <CreateForm />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Edit Form */}
+        <Route
+          path="/edit/:id"
+          element={
+            <ProtectedRoute>
+              <EditForm />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* View Form */}
+        <Route
+          path="/view/:id"
+          element={
+            <ProtectedRoute>
+              <ViewForm />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Responses */}
+        <Route
+          path="/responses"
+          element={
+            <ProtectedRoute>
+              <Responses />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Analytics */}
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <Analytics />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+        path="/one-time/:token"
+        element={<OneTimeForm />}
+      />
+
       </Routes>
     </BrowserRouter>
   );

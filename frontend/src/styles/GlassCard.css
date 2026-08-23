@@ -79,3 +79,26 @@ cursor: pointer;
   .dashboard-glass-card:hover h1 {
     transform: scale(1.08);
   }
+  /* =========================================================
+   TOTAL FORMS - PRIMARY KPI HIGHLIGHT
+   ========================================================= */
+
+.dashboard-glass-card.total-forms-card {
+  border: 2px solid rgba(79, 209, 255, 0.55);
+
+  box-shadow:
+      0 0 18px rgba(79, 209, 255, 0.18),
+      inset 0 0 25px rgba(79, 209, 255, 0.05);
+}
+
+.dashboard-glass-card.total-forms-card h3 {
+  color: #ffffff;
+}
+
+.dashboard-glass-card.total-forms-card h1 {
+  color: #4fd1ff;
+
+  text-shadow:
+      0 0 12px rgba(79, 209, 255, 0.5),
+      0 0 25px rgba(79, 209, 255, 0.25);
+}

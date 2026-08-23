@@ -1,10 +1,10 @@
 import "../styles/GlassCard.css";
 import { motion } from "framer-motion";
 
-function GlassCard({ title, value }) {
+function GlassCard({ title, value, className = "" }) {
   return (
     <motion.div
-      className="dashboard-glass-card"
+      className={`dashboard-glass-card ${className}`}
       whileHover={{
         scale: 1.05,
         y: -8,

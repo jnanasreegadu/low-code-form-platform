@@ -48,10 +48,15 @@ function FieldLibrary({ addField }) {
   ];
 
   return (
-    <div className="glass-card">
+    <div className="glass-card field-library-card">
+      <span className="section-eyebrow">BUILD</span>
       <h2>Field Library</h2>
+      <p style={{ color: "#94a3b8", fontSize: "13px", margin: "4px 0 16px" }}>
+        Click a field to add it to your form
+      </p>
 
       <div className="field-grid">
+
         {fieldTypes.map((field) => (
           <button
             key={field.name}

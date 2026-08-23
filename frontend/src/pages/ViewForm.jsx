@@ -102,8 +102,9 @@ function ViewForm() {
 ))}
   <button
   className="back-btn"
-  onClick={() => navigate("/")}
+  onClick={() => navigate("/dashboard")}
 >
+
   <ArrowLeft size={18} />
   Back
 </button>
