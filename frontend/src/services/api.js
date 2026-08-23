@@ -1,9 +1,14 @@
 import axios from "axios";
 
 const getBaseURL = () => {
-  if (import.meta.env.VITE_API_URL) {
-    const url = import.meta.env.VITE_API_URL;
-    return url.endsWith("/") ? url : `${url}/`;
+  const envUrl = import.meta.env.VITE_API_URL;
+  if (
+    envUrl &&
+    !envUrl.includes("vercel.app") &&
+    envUrl !== "/api" &&
+    envUrl !== "/api/"
+  ) {
+    return envUrl.endsWith("/") ? envUrl : `${envUrl}/`;
   }
 
   const isLocalhost =
@@ -17,6 +22,7 @@ const getBaseURL = () => {
 
   return "https://low-code-form-platform.onrender.com/api/";
 };
+
 
 const api = axios.create({
   baseURL: getBaseURL(),
