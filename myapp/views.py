@@ -58,11 +58,29 @@ from .serializers import (
     SubmissionSerializer,
     ConditionalRuleSerializer,
 )
+def auto_publish_due_scheduled_forms():
+    """
+    Find all forms with status='scheduled' whose scheduled_publish_at <= timezone.now()
+    and automatically flip their status to 'published'.
+    """
+    try:
+        now = timezone.now()
+        Form.objects.filter(
+            status="scheduled",
+            scheduled_publish_at__isnull=False,
+            scheduled_publish_at__lte=now
+        ).update(status="published")
+    except Exception as e:
+        logger.error(f"Error auto-publishing scheduled forms: {e}")
+
+
 class FormViewSet(viewsets.ModelViewSet):
     queryset = Form.objects.all()
     serializer_class = FormSerializer
 
     def get_queryset(self):
+        auto_publish_due_scheduled_forms()
+
         if self.action == "public":
             return Form.objects.all()
 
@@ -70,6 +88,7 @@ class FormViewSet(viewsets.ModelViewSet):
             return Form.objects.none()
 
         return Form.objects.filter(owner=self.request.user)
+
     def create(self, request):
         data = request.data
 
@@ -117,7 +136,7 @@ class FormViewSet(viewsets.ModelViewSet):
             field_map[str(item["id"])] = field
 
             # Save dropdown options
-            if item["type"] == "Dropdown":
+            if item.get("type", "").lower() in ["dropdown", "select", "multicheckbox"]:
                 for i, option in enumerate(
                     item.get("options", []),
                     start=1
@@ -127,6 +146,7 @@ class FormViewSet(viewsets.ModelViewSet):
                         option_text=option,
                         option_order=i,
                     )
+
 
         # =====================================================
         # SAVE CONDITIONAL RULES
@@ -292,7 +312,8 @@ class FormViewSet(viewsets.ModelViewSet):
                 field_map[str(item["id"])] = new_field
 
                 # Dropdown options
-                if item.get("type", "").lower() == "dropdown":
+                if item.get("type", "").lower() in ["dropdown", "select", "multicheckbox"]:
+
 
                     for i, option in enumerate(
                         item.get("options", []),
@@ -467,7 +488,8 @@ class FormViewSet(viewsets.ModelViewSet):
             )
             field_map[str(item["id"])] = new_field
 
-            if item["type"] == "Dropdown":
+            if item.get("type", "").lower() in ["dropdown", "select", "multicheckbox"]:
+
                 for i, option in enumerate(item.get("options", []), start=1):
                     FieldOption.objects.create(
                         field=new_field,
@@ -972,16 +994,20 @@ def normalize_email(value):
 def maybe_auto_publish_scheduled_form(form):
     """
     Reusable publication gate for scheduled forms.
-
-    Called by every public-facing read endpoint. If the form is
-    "scheduled" and its time has arrived, this is the single place
-    that flips it to "published" — nothing else needs to change,
-    because the FormVersion/Fields were already created back when
-    the schedule was set (see FormViewSet.publish).
-
-    Returns None if the form may be served publicly right now.
-    Returns a user-facing message string if it must still be blocked.
     """
+    if not form:
+        return None
+
+    auto_publish_due_scheduled_forms()
+
+    try:
+        form.refresh_from_db()
+    except Exception:
+        pass
+
+    if form.status == "published":
+        return None
+
     if form.status != "scheduled":
         return None
 
@@ -996,6 +1022,7 @@ def maybe_auto_publish_scheduled_form(form):
         if when else "a later date"
     )
     return f"This form is scheduled to be published on {display}."
+
 # ==========================================================
 # AI-ASSISTED FORM GENERATION
 # ==========================================================
@@ -1096,18 +1123,102 @@ def _validate_generated_form(data):
     }, None
 
 
-def _call_form_generation_llm(prompt):
+def _call_llm_chat(system_prompt, user_prompt, temperature=0.7):
     """
-    Calls Anthropic Claude API and returns generated text.
+    Unified LLM chat caller supporting Groq API (llama-3.3-70b-versatile) with fallback to Anthropic API.
     """
-
-    api_key = os.environ.get("LLM_API_KEY")
+    groq_key = os.environ.get("GROQ_API_KEY")
+    llm_key = os.environ.get("LLM_API_KEY")
+    api_key = groq_key or llm_key
 
     if not api_key:
-        raise RuntimeError(
-            "LLM_API_KEY is not configured on the server."
-        )
+        raise RuntimeError("LLM_API_KEY or GROQ_API_KEY is not configured on the server.")
 
+    is_anthropic = api_key.startswith("sk-ant-")
+
+    if not is_anthropic:
+        models_to_try = [
+            os.environ.get("GROQ_MODEL", "groq/compound-mini"),
+            "groq/compound-mini",
+            "qwen/qwen3.6-27b",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b"
+        ]
+
+        last_error = None
+        for model_name in models_to_try:
+            try:
+                response = requests.post(
+                    "https://api.groq.com/openai/v1/chat/completions",
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json",
+                    },
+                    json={
+                        "model": model_name,
+                        "messages": [
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt}
+                        ],
+                        "temperature": temperature,
+                        "response_format": {"type": "json_object"}
+                    },
+                    timeout=30,
+                )
+                if response.status_code == 200:
+                    payload = response.json()
+                    return payload["choices"][0]["message"]["content"]
+                else:
+                    detail = response.text
+                    try:
+                        detail = response.json().get("error", {}).get("message", response.text)
+                    except Exception:
+                        pass
+                    last_error = f"Groq API error ({model_name}): {detail}"
+                    logger.warning(last_error)
+            except Exception as e:
+                last_error = f"Groq request exception ({model_name}): {e}"
+                logger.warning(last_error)
+
+        raise RuntimeError(last_error or "Groq API request failed.")
+
+    else:
+        request_data = {
+            "model": "claude-sonnet-5",
+            "max_tokens": 1500,
+            "system": system_prompt,
+            "messages": [{"role": "user", "content": user_prompt}]
+        }
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": api_key,
+                "anthropic-version": "2023-06-01",
+                "content-type": "application/json",
+            },
+            json=request_data,
+            timeout=30,
+        )
+        if response.status_code >= 400:
+            try:
+                detail = response.json().get("error", {}).get("message", response.text)
+            except ValueError:
+                detail = response.text
+            raise RuntimeError(f"Anthropic API error: {detail}")
+
+        payload = response.json()
+        text_parts = [
+            block.get("text", "")
+            for block in payload.get("content", [])
+            if block.get("type") == "text"
+        ]
+        return "".join(text_parts)
+
+
+def _call_form_generation_llm(prompt):
+    """
+    Calls LLM API (Groq or Anthropic) and returns generated form structure JSON string.
+    """
     system_prompt = (
         "You generate JSON form definitions for a form builder. "
         "Respond with ONLY raw JSON, no markdown fences, no commentary. "
@@ -1124,65 +1235,14 @@ def _call_form_generation_llm(prompt):
         "Use 3 to 8 fields that make sense for the request. "
         "Only use options for dropdown or multicheckbox fields."
     )
-
-    request_data = {
-        "model": "claude-sonnet-5",
-        "max_tokens": 1500,
-        "system": system_prompt,
-        "messages": [
-            {
-                "role": "user",
-                "content": prompt
-            }
-        ]
-    }
-
-    response = requests.post(
-        "https://api.anthropic.com/v1/messages",
-        headers={
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        },
-        json=request_data,
-        timeout=30,
-    )
-
-    if response.status_code >= 400:
-        logger.error(
-            f"ANTHROPIC API ERROR {response.status_code}: {response.text}"
-        )
-        # Surface Anthropic's actual message instead of a generic 400
-        try:
-            detail = response.json().get("error", {}).get("message", response.text)
-        except ValueError:
-            detail = response.text
-        raise RuntimeError(f"Anthropic API error: {detail}")
-
-    payload = response.json()
-
-    text_parts = [
-        block.get("text", "")
-        for block in payload.get("content", [])
-        if block.get("type") == "text"
-    ]
-
-    return "".join(text_parts)
+    return _call_llm_chat(system_prompt, prompt, temperature=0.7)
 
 
 class AIGenerateFormView(APIView):
     """
     POST /api/ai/generate-form/
-
-    Generates a DRAFT form structure (title/description/fields) from a
-    natural-language prompt. Never saves, publishes, or schedules
-    anything - it only returns validated JSON for the frontend to load
-    into the existing form builder state, exactly as if the creator had
-    typed it in by hand.
     """
-
     def post(self, request):
-
         if not request.user.is_authenticated:
             return Response(
                 {"error": "Authentication required"},
@@ -1205,28 +1265,16 @@ class AIGenerateFormView(APIView):
 
         try:
             raw_text = _call_form_generation_llm(prompt)
-
         except RuntimeError as e:
             logger.error(f"AI FORM GENERATION CONFIG ERROR: {e}")
             return Response(
-                {"error": str(e)},   # was: "AI form generation is not available right now."
+                {"error": str(e)},
                 status=status.HTTP_503_SERVICE_UNAVAILABLE
             )
-
         except Exception as e:
-            print("========================================")
-            print("AI FORM GENERATION ERROR:", repr(e))
-            print("========================================")
-
-            logger.error(
-                f"AI FORM GENERATION REQUEST FAILED: {e}",
-                exc_info=True
-            )
-
+            logger.error(f"AI FORM GENERATION REQUEST FAILED: {e}", exc_info=True)
             return Response(
-                {
-                    "error": f"AI generation failed: {str(e)}"
-                },
+                {"error": f"AI generation failed: {str(e)}"},
                 status=status.HTTP_502_BAD_GATEWAY
             )
 
@@ -1241,7 +1289,6 @@ class AIGenerateFormView(APIView):
             )
 
         cleaned, error = _validate_generated_form(parsed)
-
         if error:
             return Response(
                 {"error": error},
@@ -1249,6 +1296,131 @@ class AIGenerateFormView(APIView):
             )
 
         return Response(cleaned, status=status.HTTP_200_OK)
+
+
+class AIFillFormView(APIView):
+    """
+    POST /api/ai/autofill-form/
+    Generates realistic sample responses for form fields using Groq LLM.
+    """
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        fields = request.data.get("fields", [])
+        prompt_context = request.data.get("prompt", "")
+
+        if not fields or not isinstance(fields, list):
+            return Response(
+                {"error": "A list of fields is required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        simplified_fields = []
+        for f in fields:
+            simplified_fields.append({
+                "id": str(f.get("id")),
+                "label": f.get("label", ""),
+                "field_type": f.get("type", f.get("field_type", "text")),
+                "options": f.get("options", []),
+                "placeholder": f.get("placeholder", "")
+            })
+
+        system_prompt = (
+            "You are an intelligent form respondent assistant. "
+            "You fill out form fields with realistic, high-quality test values. "
+            "Respond ONLY with valid JSON mapping each field 'id' (as string key) to a suitable string answer. "
+            "For 'dropdown' or 'multicheckbox' or 'checkbox', pick valid options from the provided options list. "
+            "For 'rating', return a number string between 1 and 5. "
+            "For 'date', return YYYY-MM-DD. "
+            "For 'email', return a valid format email. "
+            "For 'number', return a realistic number."
+        )
+
+        user_prompt = f"Context: {prompt_context}\nForm Fields:\n{json.dumps(simplified_fields)}"
+
+        try:
+            raw_text = _call_llm_chat(system_prompt, user_prompt, temperature=0.7)
+            json_text = _extract_json_block(raw_text)
+            parsed = json.loads(json_text)
+            return Response({"values": parsed}, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"AI AUTOFILL ERROR: {e}", exc_info=True)
+            return Response({"error": f"Auto-fill failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class AITranslateFormView(APIView):
+    """
+    POST /api/ai/translate-form/
+    Translates form title, description, labels, placeholders, and options into a target language using Groq LLM.
+    """
+    authentication_classes = []
+    permission_classes = []
+
+    def post(self, request):
+        target_lang = str(request.data.get("target_language", "English")).strip()
+        title = request.data.get("title", "")
+        description = request.data.get("description", "")
+        fields = request.data.get("fields", [])
+
+        if not target_lang or target_lang.lower() == "english":
+            return Response({
+                "target_language": "English",
+                "title": title,
+                "description": description,
+                "fields": fields
+            }, status=status.HTTP_200_OK)
+
+        simplified_fields = []
+        for f in fields:
+            simplified_fields.append({
+                "id": f.get("id"),
+                "label": f.get("label", ""),
+                "placeholder": f.get("placeholder", ""),
+                "options": f.get("options", [])
+            })
+
+        system_prompt = (
+            f"You are a professional translator. Translate form content accurately into {target_lang}. "
+            "Respond ONLY with valid JSON adhering strictly to this JSON structure: "
+            '{"title": "translated string", "description": "translated string", "fields": [{"id": ..., "label": "translated label", "placeholder": "translated placeholder", "options": ["translated option 1", ...]}]}'
+        )
+
+        user_prompt = json.dumps({
+            "title": title,
+            "description": description,
+            "fields": simplified_fields
+        })
+
+        try:
+            raw_text = _call_llm_chat(system_prompt, user_prompt, temperature=0.3)
+            json_text = _extract_json_block(raw_text)
+            parsed = json.loads(json_text)
+
+            translated_field_map = {str(item.get("id")): item for item in parsed.get("fields", [])}
+            new_fields = []
+            for original_field in fields:
+                fid_str = str(original_field.get("id"))
+                if fid_str in translated_field_map:
+                    tf = translated_field_map[fid_str]
+                    copied = dict(original_field)
+                    if tf.get("label"): copied["label"] = tf["label"]
+                    if tf.get("placeholder"): copied["placeholder"] = tf["placeholder"]
+                    if tf.get("options"): copied["options"] = tf["options"]
+                    new_fields.append(copied)
+                else:
+                    new_fields.append(original_field)
+
+            return Response({
+                "target_language": target_lang,
+                "title": parsed.get("title") or title,
+                "description": parsed.get("description") or description,
+                "fields": new_fields
+            }, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.error(f"AI TRANSLATION ERROR: {e}", exc_info=True)
+            return Response({"error": f"Translation failed: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 
 def send_submission_confirmation_email(submission):
     """
@@ -2467,7 +2639,22 @@ def public_form_by_uuid(request, uuid):
         "rules": [],
     }
 
+    json_fields = version.form.Fields or []
+
     for field in fields:
+        options = list(
+            FieldOption.objects.filter(field=field)
+            .order_by("option_order")
+            .values_list("option_text", flat=True)
+        )
+        if not options:
+            matching_json = next(
+                (jf for jf in json_fields if str(jf.get("label", "")).strip().lower() == str(field.label).strip().lower()),
+                None
+            )
+            if matching_json and matching_json.get("options"):
+                options = matching_json.get("options")
+
         data["fields"].append({
             "id": field.id,
             "label": field.label,
@@ -2478,13 +2665,9 @@ def public_form_by_uuid(request, uuid):
             "max_length": field.max_length,
             "min_value": field.min_value,
             "max_value": field.max_value,
-            "options": [
-                option.option_text
-                for option in FieldOption.objects.filter(
-                    field=field
-                )
-            ],
+            "options": options,
         })
+
 
     rules = ConditionalRule.objects.filter(
         source_field__form_version=version,
@@ -3002,11 +3185,18 @@ def one_time_form(request, token):
     form_version = one_time_link.form_version
     form = form_version.form
 
+    schedule_message = maybe_auto_publish_scheduled_form(form)
+    if schedule_message:
+        return JsonResponse({"error": schedule_message}, status=403)
+
+
     fields = Field.objects.filter(
         form_version=form_version
     ).order_by("field_order")
 
     field_data = []
+
+    json_fields = form.Fields or []
 
     for field in fields:
 
@@ -3015,6 +3205,14 @@ def one_time_form(request, token):
             .order_by("option_order")
             .values_list("option_text", flat=True)
         )
+        if not options:
+            matching_json = next(
+                (jf for jf in json_fields if str(jf.get("label", "")).strip().lower() == str(field.label).strip().lower()),
+                None
+            )
+            if matching_json and matching_json.get("options"):
+                options = matching_json.get("options")
+
 
         field_data.append({
             "id": field.id,

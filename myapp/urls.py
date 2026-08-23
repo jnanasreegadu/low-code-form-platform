@@ -14,7 +14,7 @@ from .views import (
     submit_one_time_submission,
     set_public_form_expiry,
 )
-from .views import AIGenerateFormView
+from .views import AIGenerateFormView, AIFillFormView, AITranslateFormView
 from .views import (
     LoginView,
     RegisterView,
@@ -27,12 +27,13 @@ from .views import (
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
-from .views import LoginView, RegisterView, ProfileView, GoogleLoginView
+
 router = DefaultRouter()
 router.register(r'forms', FormViewSet)
 router.register(r'fields', FieldViewSet)
 router.register(r'submissions', SubmissionViewSet)
 router.register(r'conditional-rules', ConditionalRuleViewSet)
+
 urlpatterns = [
     path("", include(router.urls)),
     path("login/", LoginView.as_view(), name="login"),
@@ -41,36 +42,34 @@ urlpatterns = [
     path("public/<uuid:uuid>/", public_form_by_uuid),
     path("profile/", ProfileView.as_view(), name="profile"),
     path(
-    "one-time/create/<uuid:uuid>/",
-    create_one_time_link,
-    name="create-one-time-link"
-),
-
-path(
-    "one-time/<uuid:token>/",
-    one_time_form,
-    name="one-time-form"
-),
-
-path(
-    "one-time/<uuid:token>/start/",
-    start_one_time_submission,
-    name="start-one-time-submission"
-),
+        "one-time/create/<uuid:uuid>/",
+        create_one_time_link,
+        name="create-one-time-link"
+    ),
     path(
-    "public/<uuid:uuid>/start/",
-    start_public_form,
-),
+        "one-time/<uuid:token>/",
+        one_time_form,
+        name="one-time-form"
+    ),
     path(
-    "one-time/<uuid:token>/submit/",
-    submit_one_time_submission,
-    name="submit-one-time-submission"
-),
+        "one-time/<uuid:token>/start/",
+        start_one_time_submission,
+        name="start-one-time-submission"
+    ),
     path(
-    "public/<uuid:uuid>/expiry/",
-    set_public_form_expiry,
-    name="set-public-form-expiry"
-),
+        "public/<uuid:uuid>/start/",
+        start_public_form,
+    ),
+    path(
+        "one-time/<uuid:token>/submit/",
+        submit_one_time_submission,
+        name="submit-one-time-submission"
+    ),
+    path(
+        "public/<uuid:uuid>/expiry/",
+        set_public_form_expiry,
+        name="set-public-form-expiry"
+    ),
     path(
         "respondent/google-verify/",
         RespondentGoogleVerifyView.as_view(),
@@ -91,7 +90,18 @@ path(
         AIGenerateFormView.as_view(),
         name="ai-generate-form"
     ),
+    path(
+        "ai/autofill-form/",
+        AIFillFormView.as_view(),
+        name="ai-autofill-form"
+    ),
+    path(
+        "ai/translate-form/",
+        AITranslateFormView.as_view(),
+        name="ai-translate-form"
+    ),
 ]
+
 urlpatterns += static(
     settings.MEDIA_URL,
     document_root=settings.MEDIA_ROOT
