@@ -2,7 +2,8 @@ import { useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
 import { Mail, CheckCircle } from "lucide-react";
 import api from "../services/api";
-import "../styles/IdentitySelector.css";
+import "../styles/Identityselector.css";
+
 
 function IdentitySelector({ submissionId, onVerified }) {
   const [googleEmail, setGoogleEmail] = useState(null);
