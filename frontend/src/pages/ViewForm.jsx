@@ -4,6 +4,7 @@ import api from "../services/api";
 import "../styles/ViewForm.css";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import Loader from "../components/Loader";
 
 function ViewForm() {
   const navigate = useNavigate();
@@ -19,7 +20,8 @@ function ViewForm() {
       .catch((err) => console.log(err));
   }, [id]);
 
-  if (!form) return <h2>Loading...</h2>;
+  if (!form) return <Loader text="Loading form preview..." />;
+
 
   return (
     <div className="view-page">

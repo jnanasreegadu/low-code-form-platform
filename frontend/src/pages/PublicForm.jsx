@@ -366,9 +366,10 @@ function PublicForm() {
     );
   }
   
-  if (!form) {
-    return <h2>Loading...</h2>;
+  if (!form && !formExpired && !formScheduled) {
+    return <Loader text="Loading public form..." />;
   }
+
 
 
 

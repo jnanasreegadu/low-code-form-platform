@@ -4,9 +4,11 @@ import { Globe, Sparkles, Download, AlertTriangle, CheckCircle, Lock, Mail, Pape
 import api from "../services/api";
 import "../styles/PublicForm.css";
 import IdentitySelector from "../components/IdentitySelector";
+import Loader from "../components/Loader";
 
 
 function OneTimeForm() {
+
   const { token } = useParams();
   const [submitted, setSubmitted] = useState(false);
   const [form, setForm] = useState(null);
@@ -390,8 +392,9 @@ function OneTimeForm() {
   }
 
   if (!form) {
-    return <h2>Loading...</h2>;
+    return <Loader text="Loading one-time form..." />;
   }
+
 
   const activeForm = displayForm || form;
 
