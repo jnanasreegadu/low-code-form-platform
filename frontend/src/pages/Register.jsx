@@ -53,59 +53,120 @@ function Register() {
   return (
     <div className="login-page">
 
-      <div className="login-card">
+      <div className="login-glow glow-one"></div>
+      <div className="login-glow glow-two"></div>
 
-        <h1>FormFlow</h1>
+      <div className="login-card register-card">
 
-        <h2>Create Account</h2>
+        {/* BRAND */}
+        <div className="login-brand">
+          <div className="login-logo">F</div>
 
-        <input
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={(e) => setUsername(e.target.value)}
-        />
+          <div>
+            <h1>FormFlow</h1>
+            <span>Admin workspace</span>
+          </div>
+        </div>
 
-        <input
-          type="text"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
+        {/* HEADING */}
+        <div className="login-heading">
+          <span>GET STARTED</span>
 
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+          <h2>Create your account</h2>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+          <p>
+            Create your FormFlow workspace and start building
+            powerful forms.
+          </p>
+        </div>
 
-        <input
-          type="password"
-          placeholder="Confirm Password"
-          value={confirmPassword}
-          onChange={(e) =>
-            setConfirmPassword(e.target.value)
-          }
-        />
+        {/* FORM */}
+        <div className="login-form">
 
-        <button onClick={handleRegister}>
-          Create Account
-        </button>
+          <div className="input-group">
+            <label>Username</label>
 
-        <button onClick={() => navigate("/login")}>
-          Back to Login
-        </button>
+            <input
+              type="text"
+              placeholder="Enter your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Name</label>
+
+            <input
+              type="text"
+              placeholder="Enter your name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Email</label>
+
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Password</label>
+
+            <input
+              type="password"
+              placeholder="Create a password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </div>
+
+          <div className="input-group">
+            <label>Confirm Password</label>
+
+            <input
+              type="password"
+              placeholder="Confirm your password"
+              value={confirmPassword}
+              onChange={(e) =>
+                setConfirmPassword(e.target.value)
+              }
+            />
+          </div>
+
+          <button
+            className="login-btn"
+            onClick={handleRegister}
+          >
+            Create Account
+          </button>
+
+          <div className="login-divider">
+            <span>OR</span>
+          </div>
+
+          <button
+            className="create-account-btn"
+            onClick={() => navigate("/login")}
+          >
+            Back to Login
+          </button>
+
+        </div>
+
+        <div className="login-footer">
+          <span>
+            Secure access to your FormFlow workspace
+          </span>
+        </div>
 
       </div>
-
     </div>
   );
 }

@@ -48,6 +48,7 @@ class FormSerializer(serializers.ModelSerializer):
 
     def get_conditional_rules(self, obj):
 
+        # First try to get the latest published version
         latest_version = (
             FormVersion.objects
             .filter(
@@ -57,6 +58,16 @@ class FormSerializer(serializers.ModelSerializer):
             .order_by("-version")
             .first()
         )
+
+        # If there is no published version,
+        # use the latest version (important for draft forms)
+        if not latest_version:
+            latest_version = (
+                FormVersion.objects
+                .filter(form=obj)
+                .order_by("-version")
+                .first()
+            )
 
         if not latest_version:
             return []

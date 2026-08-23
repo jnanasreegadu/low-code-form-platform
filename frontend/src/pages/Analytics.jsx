@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import api from "../services/api";
 import "./Analytics.css";
-
+import Sidebar from "../components/Sidebar";
 function Analytics() {
 
   const [forms, setForms] = useState([]);
@@ -179,6 +179,8 @@ function Analytics() {
   // ==========================================================
 
   return (
+    <>
+      <Sidebar />
     
     <div className="analytics-page">
 
@@ -627,7 +629,7 @@ function Analytics() {
       )}
 
     </div>
-
+  </>
   );
 }
 

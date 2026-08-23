@@ -6,7 +6,6 @@ from django.contrib.auth.models import User
 # ==========================================================
 # FORM
 # ==========================================================
-
 class Form(models.Model):
 
     owner = models.ForeignKey(
@@ -19,23 +18,43 @@ class Form(models.Model):
 
     title = models.CharField(max_length=255)
     description = models.TextField()
+    retention_days = models.IntegerField(
+        default=365,
+        null=True,
+        blank=True
+    )
 
     STATUS_CHOICES = [
         ("draft", "Draft"),
+        ("scheduled", "Scheduled"),   # NEW
         ("published", "Published"),
         ("archived", "Archived"),
     ]
+    scheduled_publish_at = models.DateTimeField(
+    null=True,
+    blank=True
+     )
 
     status = models.CharField(
         max_length=20,
         choices=STATUS_CHOICES,
         default="draft"
     )
+    limit_one_response_per_email = models.BooleanField(
+        default=False
+    )
+
+    # NEW — when set + status == "scheduled", the form becomes
+    # publicly available automatically once this time passes.
+    scheduled_publish_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
 
     Fields = models.JSONField(default=list)
 
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
+
 
 # ==========================================================
 # FORM VERSION
@@ -57,12 +76,17 @@ class FormVersion(models.Model):
 
     is_published = models.BooleanField(default=False)
 
+    # PUBLIC FORM EXPIRY
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"{self.form.title} - V{self.version}"
-
 
 # ==========================================================
 # FIELD
@@ -108,16 +132,6 @@ class Field(models.Model):
     )
 
     max_length = models.IntegerField(
-        null=True,
-        blank=True
-    )
-
-    min_value = models.FloatField(
-        null=True,
-        blank=True
-    )
-
-    max_value = models.FloatField(
         null=True,
         blank=True
     )
@@ -216,32 +230,70 @@ class Submission(models.Model):
         on_delete=models.CASCADE
     )
 
-    submitted_at = models.DateTimeField(
-        null=True,
-        blank=True
-    )
-    started_at = models.DateTimeField(
-        null=True,
-        blank=True
-    )
+    submitted_at = models.DateTimeField(null=True, blank=True)
+    started_at = models.DateTimeField(null=True, blank=True)
+    completion_time_seconds = models.FloatField(null=True, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    status = models.CharField(max_length=20, default="submitted")
 
-    completion_time_seconds = models.FloatField(
-        null=True,
-        blank=True
-    )
-
-    ip_address = models.GenericIPAddressField(
-        null=True,
-        blank=True
-    )
-
-    status = models.CharField(
-        max_length=20,
-        default="submitted"
-    )
+    # NEW: verified respondent identity, independent of any
+    # Email-type form field. Set only after Google sign-in +
+    # OTP verification succeed.
+    respondent_email = models.EmailField(null=True, blank=True)
+    respondent_email_verified = models.BooleanField(default=False)
 
     def __str__(self):
         return f"Submission {self.id}"
+# ==========================================================
+# OTP VERIFICATION (respondent identity, not admin login)
+# ==========================================================
+
+class OTPVerification(models.Model):
+    submission = models.ForeignKey(
+        Submission,
+        on_delete=models.CASCADE,
+        related_name="otp_verifications"
+    )
+
+    email = models.EmailField()
+    code = models.CharField(max_length=6)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+
+    verified = models.BooleanField(default=False)
+    attempts = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"OTP for {self.email} (submission {self.submission_id})"
+
+# ==========================================================
+# AUDIT LOG
+# ==========================================================
+
+class AuditLog(models.Model):
+
+    user = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
+
+    action = models.CharField(
+        max_length=50
+    )
+
+    affected_submissions = models.JSONField(
+        default=list
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+        return f"{self.action} - {self.user}"
 
 
 # ==========================================================
@@ -290,3 +342,45 @@ class UploadedFile(models.Model):
 
     def __str__(self):
         return self.file.name
+class OneTimeLink(models.Model):
+
+    form_version = models.ForeignKey(
+        FormVersion,
+        on_delete=models.CASCADE,
+        related_name="one_time_links"
+    )
+
+    token = models.UUIDField(
+        default=uuid.uuid4,
+        unique=True,
+        editable=False
+    )
+
+    used = models.BooleanField(
+        default=False
+    )
+
+    used_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    expires_at = models.DateTimeField(
+        null=True,
+        blank=True
+    )
+
+    submission = models.OneToOneField(
+        Submission,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="one_time_link"
+    )
+
+    created_at = models.DateTimeField(
+        auto_now_add=True
+    )
+
+    def __str__(self):
+        return f"One-Time Link - {self.form_version.form.title}"

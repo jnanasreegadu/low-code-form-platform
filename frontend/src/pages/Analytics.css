@@ -2475,3 +2475,60 @@
     font-size: 25px;
   }
 }
+.analytics-page {
+  margin-left: 255px;
+  width: calc(100% - 255px);
+  min-height: 100vh;
+  box-sizing: border-box;
+
+  padding: 30px 40px;
+}
+/* =========================================================
+   SIDEBAR + FULL PAGE LAYOUT FIX
+   ========================================================= */
+
+   .analytics-page {
+    margin-left: 212px;
+    width: calc(100% - 212px);
+    max-width: none;
+  
+    min-height: 100vh;
+    box-sizing: border-box;
+  
+    padding: 32px 40px 60px;
+  }
+  
+  /* Use full available content width */
+  .analytics-top-grid,
+  .analytics-cards,
+  .distribution-section {
+    width: 100%;
+    max-width: none;
+    box-sizing: border-box;
+  }
+  /* =========================================================
+   FIXED SIZE CALENDAR CARD
+   ========================================================= */
+
+.analytics-top-grid {
+  display: grid !important;
+
+  grid-template-columns: minmax(0, 1fr) 360px !important;
+
+  gap: 20px;
+  align-items: stretch;
+}
+
+/* Calendar fixed size */
+.calendar-card {
+  width: 360px !important;
+  min-width: 360px !important;
+  max-width: 360px !important;
+
+  height: 385px !important;
+  min-height: 385px !important;
+  max-height: 385px !important;
+
+  box-sizing: border-box;
+  flex-shrink: 0;
+}

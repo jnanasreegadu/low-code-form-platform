@@ -1368,3 +1368,100 @@ th{
     }
 
 }
+.responses-page {
+    margin-left: 212px;
+  }
+  /* =========================================
+   BULK RESPONSE ACTIONS
+========================================= */
+
+.bulk-response-actions {
+    width: 100%;
+    box-sizing: border-box;
+  
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  
+    margin: 18px 0;
+  
+    padding: 14px 18px;
+  
+    border-radius: 12px;
+  
+    background: rgba(17, 24, 39, 0.9);
+  
+    border: 1px solid rgba(59, 130, 246, 0.25);
+  
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+  }
+  
+  
+  /* SELECT ALL */
+  
+  .select-all-checkbox {
+    display: flex;
+    align-items: center;
+  
+    gap: 9px;
+  
+    color: #e2e8f0;
+  
+    font-size: 14px;
+    font-weight: 600;
+  
+    cursor: pointer;
+  }
+  
+  .select-all-checkbox input {
+    width: 17px;
+    height: 17px;
+  
+    cursor: pointer;
+  
+    accent-color: #22d3ee;
+  }
+  
+  
+  /* DELETE SELECTED */
+  
+  .bulk-delete-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  
+    gap: 8px;
+  
+    padding: 9px 16px;
+  
+    border-radius: 8px;
+  
+    border: 1px solid rgba(239, 68, 68, 0.35);
+  
+    background: rgba(239, 68, 68, 0.10);
+  
+    color: #f87171;
+  
+    font-size: 13px;
+    font-weight: 600;
+  
+    cursor: pointer;
+  
+    transition: all 0.2s ease;
+  }
+  
+  .bulk-delete-btn:hover:not(:disabled) {
+    background: rgba(239, 68, 68, 0.18);
+  
+    border-color: rgba(239, 68, 68, 0.55);
+  
+    color: #fca5a5;
+  
+    transform: translateY(-1px);
+  }
+  
+  .bulk-delete-btn:disabled {
+    opacity: 0.4;
+  
+    cursor: not-allowed;
+  }

@@ -3,7 +3,7 @@ import api from "../services/api";
 import "../styles/Responses.css";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Download } from "lucide-react";
-
+import Sidebar from "../components/Sidebar";
 function Responses() {
   const navigate = useNavigate();
   const [responses, setResponses] = useState([]);
@@ -12,7 +12,8 @@ function Responses() {
 
   const [selectedForm, setSelectedForm] = useState("");
   const [selectedVersion, setSelectedVersion] = useState("");
-
+  const [selectedResponses, setSelectedResponses] = useState([]);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
@@ -142,6 +143,69 @@ function Responses() {
   
     }
   };
+  // ==========================================================
+// BULK RESPONSE DELETE
+// ==========================================================
+
+const handleBulkDelete = async () => {
+
+  if (selectedResponses.length === 0) {
+    alert("Please select at least one response.");
+    return;
+  }
+
+  const confirmDelete = window.confirm(
+    `Are you sure you want to delete ${selectedResponses.length} selected response(s)?`
+  );
+
+  if (!confirmDelete) return;
+
+  try {
+
+    setDeleteLoading(true);
+
+    const response = await api.post(
+      "submissions/bulk_delete_responses/",
+      {
+        submission_ids: selectedResponses
+      }
+    );
+
+    alert(
+      response.data?.message ||
+      "Responses deleted successfully."
+    );
+
+    // Remove deleted responses from UI
+    setResponses((prevResponses) =>
+      prevResponses.filter(
+        (item) =>
+          !selectedResponses.includes(item.submission_id)
+      )
+    );
+
+    // Clear selection
+    setSelectedResponses([]);
+
+  } catch (error) {
+
+    console.error("BULK DELETE ERROR:", error);
+    console.error(
+      "SERVER RESPONSE:",
+      error.response?.data
+    );
+
+    alert(
+      error.response?.data?.detail ||
+      "Failed to delete selected responses."
+    );
+
+  } finally {
+
+    setDeleteLoading(false);
+
+  }
+};
   const exportResponses = async (format) => {
 
     if (!selectedVersion) {
@@ -201,10 +265,12 @@ function Responses() {
     }
   };
   return (
+    <>
+      <Sidebar />
     <div className="responses-page">
       <button
   className="back-btn"
-  onClick={() => navigate("/")}
+  onClick={() => navigate("/dashboard")}
 >
   <ArrowLeft size={18} />
   Back
@@ -579,6 +645,69 @@ function Responses() {
   </div>
 
 </div>
+      {/* ==========================================================
+    BULK RESPONSE ACTIONS
+========================================================== */}
+
+{responses.length > 0 && (
+
+<div className="bulk-response-actions">
+
+  <label className="select-all-checkbox">
+
+    <input
+      type="checkbox"
+      checked={
+        responses.length > 0 &&
+        selectedResponses.length === responses.length
+      }
+      onChange={(e) => {
+
+        if (e.target.checked) {
+
+          setSelectedResponses(
+            responses.map(
+              (item) => item.submission_id
+            )
+          );
+
+        } else {
+
+          setSelectedResponses([]);
+
+        }
+
+      }}
+    />
+
+    Select All
+
+  </label>
+
+
+  <button
+    className="bulk-delete-btn"
+    onClick={handleBulkDelete}
+    disabled={
+      selectedResponses.length === 0 ||
+      deleteLoading
+    }
+  >
+
+    {deleteLoading
+      ? "Deleting..."
+      : `Delete Selected${
+          selectedResponses.length > 0
+            ? ` (${selectedResponses.length})`
+            : ""
+        }`
+    }
+
+  </button>
+
+</div>
+
+)}
 
       {responses.length === 0 ? (
         <h3>No Responses Yet</h3>
@@ -588,6 +717,42 @@ function Responses() {
             className="response-card"
             key={item.submission_id}
           >
+        
+            {/* RESPONSE SELECTION */}
+            <div className="response-selection">
+        
+              <input
+                type="checkbox"
+                checked={selectedResponses.includes(
+                  item.submission_id
+                )}
+                onChange={(e) => {
+        
+                  if (e.target.checked) {
+        
+                    setSelectedResponses((prev) => [
+                      ...prev,
+                      item.submission_id
+                    ]);
+        
+                  } else {
+        
+                    setSelectedResponses((prev) =>
+                      prev.filter(
+                        (id) =>
+                          id !== item.submission_id
+                      )
+                    );
+        
+                  }
+        
+                }}
+              />
+        
+              <span>Select</span>
+        
+            </div>
+        
             <h3>
               Submission #{item.submission_id}
             </h3>
@@ -636,6 +801,7 @@ function Responses() {
         ))
       )}
     </div>
+  </>
   );
 }
 
