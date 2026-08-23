@@ -12,6 +12,7 @@ import SortableField from "./SortableField";
 
 function PreviewPanel({
   fields,
+  addField,
   handleDragEnd,
   updateLabel,
   deleteField,
@@ -21,6 +22,7 @@ function PreviewPanel({
   editingField,
   setEditingField
 }) {
+
   return (
     <section className="form-preview-card">
 
@@ -35,19 +37,37 @@ function PreviewPanel({
       <div className="preview-form">
 
         {fields.length === 0 ? (
+          <div className="empty-preview-studio">
+            <div className="empty-studio-icon">✨</div>
+            <h3>Your Form Canvas is Empty</h3>
+            <p>Select field elements from the palette on the left or use AI Assistant to draft a complete form in seconds.</p>
 
-          <div className="empty-preview">
-
-            <h3>No Fields Added</h3>
-
-            <p>
-              Click a field from the library to start
-              building your form.
-            </p>
-
+            <div className="empty-canvas-actions">
+              <button
+                type="button"
+                className="canvas-quick-btn"
+                onClick={() => addField && addField("Text")}
+              >
+                + Add Text Field
+              </button>
+              <button
+                type="button"
+                className="canvas-quick-btn"
+                onClick={() => addField && addField("Email")}
+              >
+                + Add Email Field
+              </button>
+              <button
+                type="button"
+                className="canvas-quick-btn"
+                onClick={() => addField && addField("Dropdown")}
+              >
+                + Add Dropdown
+              </button>
+            </div>
           </div>
-
         ) : (
+
 
           <DndContext
             collisionDetection={closestCenter}
@@ -60,36 +80,18 @@ function PreviewPanel({
             >
 
               {fields.map((field) => (
-
-                <div
-                  className="preview-field-wrapper"
+                <SortableField
                   key={field.id}
-                >
-
-                  <SortableField
-                    field={field}
-                    updateLabel={updateLabel}
-                    deleteField={deleteField}
-                    toggleRequired={toggleRequired}
-                    selectedField={selectedField}
-                    selectField={selectField}
-                  />
-
-                  {/* EDIT BUTTON */}
-                  <button
-                    type="button"
-                    className="preview-edit-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setEditingField(field);
-                    }}
-                  >
-                    ✎ Edit
-                  </button>
-
-                </div>
-
+                  field={field}
+                  updateLabel={updateLabel}
+                  deleteField={deleteField}
+                  toggleRequired={toggleRequired}
+                  selectedField={selectedField}
+                  selectField={selectField}
+                  setEditingField={setEditingField}
+                />
               ))}
+
 
             </SortableContext>
 

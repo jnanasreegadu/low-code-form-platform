@@ -1,17 +1,22 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
+import { Globe, Download, AlertTriangle, CheckCircle, ShieldCheck, Lock } from "lucide-react";
 import api from "../services/api";
 import "../styles/PublicForm.css";
 import IdentitySelector from "../components/IdentitySelector";
+import Loader from "../components/Loader";
 
 
 function PublicForm() {
-
   const { uuid } = useParams();
   const [respondentEmail, setRespondentEmail] = useState(null);
   const [respondentVerified, setRespondentVerified] = useState(false);
 
   const [form, setForm] = useState(null);
+  const [displayForm, setDisplayForm] = useState(null);
+  const [currentLang, setCurrentLang] = useState("English");
+  const [translating, setTranslating] = useState(false);
+
   const [responses, setResponses] = useState({});
   const [rules, setRules] = useState([]);
   const [startedAt, setStartedAt] = useState(null);
@@ -19,13 +24,53 @@ function PublicForm() {
   const [emailSent, setEmailSent] = useState(null);
   const [submitError, setSubmitError] = useState("");
   const [formExpired, setFormExpired] = useState(false);
-  // NEW
   const [submitted, setSubmitted] = useState(false);
   const [formScheduled, setFormScheduled] = useState(false);
   const [scheduledMessage, setScheduledMessage] = useState("");
 
-const pollIntervalRef = useRef(null);
+  const languages = [
+    "English",
+    "Spanish",
+    "French",
+    "German",
+    "Hindi",
+    "Telugu",
+    "Tamil",
+    "Arabic"
+  ];
 
+  const handleLanguageChange = async (targetLang) => {
+    setCurrentLang(targetLang);
+    if (!form) return;
+    if (targetLang === "English") {
+      setDisplayForm(form);
+      return;
+    }
+    setTranslating(true);
+    try {
+      const res = await api.post("ai/translate-form/", {
+        target_language: targetLang,
+        title: form.form_name,
+        description: form.description,
+        fields: form.fields,
+      });
+      setDisplayForm({
+        ...form,
+        form_name: res.data.title || form.form_name,
+        description: res.data.description || form.description,
+        fields: res.data.fields || form.fields,
+      });
+    } catch (err) {
+      console.error("Translation error:", err);
+      alert("Translation failed. Reverting to original language.");
+      setCurrentLang("English");
+      setDisplayForm(form);
+    } finally {
+      setTranslating(false);
+    }
+  };
+
+  const pollIntervalRef = useRef(null);
   const startCalled = useRef(false);
 
   const handleChange = (fieldId, value) => {
@@ -34,6 +79,7 @@ const pollIntervalRef = useRef(null);
       [fieldId]: value,
     }));
   };
+
 
   const isFieldHidden = (fieldId) => {
 
@@ -203,6 +249,7 @@ const pollIntervalRef = useRef(null);
         );
 
         setForm(res.data);
+        setDisplayForm(res.data);
 
         setRules(
           res.data.rules ||
@@ -442,73 +489,72 @@ const pollIntervalRef = useRef(null);
 
 
           <div className="preview-footer">
-
-            <span>
-              Version {form.version}
-            </span>
-
             {startedAt && (
               <span>
                 Submitted successfully
               </span>
             )}
-
           </div>
+
 
         </div>
 
 
         <div className="preview-actions">
-
           <button
             className="download-btn"
             onClick={downloadPDF}
           >
-            ⬇ Download PDF
+            <Download size={16} /> Download PDF Receipt
           </button>
-
         </div>
-
       </div>
-
     );
-
   }
 
+  const activeForm = displayForm || form;
 
-  // ==========================================================
-  // ORIGINAL FORM
-  // ==========================================================
+  if (!activeForm && !formExpired && !formScheduled) {
+    return <Loader text="Loading form..." />;
+  }
 
   return (
 
     <div className="public-page">
-
       <div className="public-header">
-
-        <h1>
-          {form.form_name}
-        </h1>
-
-        <p>
-          {form.description}
-        </p>
-
-        <span>
-          Version {form.version}
-        </span>
-
+        <h1>{activeForm.form_name}</h1>
+        <p>{activeForm.description}</p>
       </div>
 
 
       <div className="public-container">
+        {/* RESPONDENT TOOLBAR */}
+        <div className="respondent-toolbar">
+          <div className="toolbar-group">
+            <span className="toolbar-label"><Globe size={15} /> Language:</span>
+            <select
+              className="lang-select"
+              value={currentLang}
+              onChange={(e) => handleLanguageChange(e.target.value)}
+              disabled={translating}
+            >
+              {languages.map((lang) => (
+                <option key={lang} value={lang}>
+                  {lang}
+                </option>
+              ))}
+            </select>
+            {translating && <span className="toolbar-banner">Translating form into {currentLang}...</span>}
+          </div>
+        </div>
 
         {submitError && (
           <div className="submit-error-banner">
-            ⚠️ {submitError}
+            <AlertTriangle size={16} /> {submitError}
           </div>
         )}
 
+        {/* IDENTITY VERIFICATION GATE */}
         {submissionId && (
           <IdentitySelector
             submissionId={submissionId}
@@ -519,178 +565,168 @@ const pollIntervalRef = useRef(null);
           />
         )}
 
-        {form.fields.map((field) => {
-
-          if (isFieldHidden(field.id)) {
-            return null;
-          }
-
-          return (
-
-            <div
-              className="field-card"
-              key={field.id}
-            >
-
-              <label>
-                {field.label}
-              </label>
-
-
-              {field.field_type === "text" && (
-
-                <input
-                  type="text"
-                  placeholder={field.placeholder}
-                  onChange={(e) =>
-                    handleChange(
-                      field.id,
-                      e.target.value
-                    )
-                  }
-                />
-
-              )}
-
-
-              {field.field_type === "email" && (
-
-                <input
-                  type="email"
-                  placeholder={field.placeholder}
-                  onChange={(e) =>
-                    handleChange(
-                      field.id,
-                      e.target.value
-                    )
-                  }
-                />
-
-              )}
-
-
-              {field.field_type === "number" && (
-
-                <input
-                  type="number"
-                  placeholder={field.placeholder}
-                  onChange={(e) =>
-                    handleChange(
-                      field.id,
-                      e.target.value
-                    )
-                  }
-                />
-
-              )}
-
-
-              {field.field_type === "dropdown" && (
-
-                <select
-                  onChange={(e) =>
-                    handleChange(
-                      field.id,
-                      e.target.value
-                    )
-                  }
-                >
-
-                  <option value="">
-                    {field.placeholder ||
-                      "Select an option"}
-                  </option>
-
-                  {field.options
-                    ?.filter(
-                      (option) => option !== ""
-                    )
-                    .map((option, index) => (
-
-                      <option
-                        key={index}
-                        value={option}
-                      >
-                        {option}
-                      </option>
-
-                    ))}
-
-                </select>
-
-              )}
-
-
-              {field.field_type === "date" && (
-
-                <input
-                  type="date"
-                  onChange={(e) =>
-                    handleChange(
-                      field.id,
-                      e.target.value
-                    )
-                  }
-                />
-
-              )}
-
-
-              {(field.field_type === "file" ||
-                field.field_type === "file upload") && (
-
-                <input
-                  type="file"
-                  onChange={(e) =>
-                    handleChange(
-                      field.id,
-                      e.target.files[0]
-                    )
-                  }
-                />
-
-              )}
-
-
-              {field.field_type === "checkbox" && (
-
-                <div>
-
-                  <input
-                    type="checkbox"
-                    onChange={(e) =>
-                      handleChange(
-                        field.id,
-                        e.target.checked
-                      )
-                    }
-                  />
-
-                  <span>
-                    {" "}
-                    Accept Terms
-                  </span>
-
-                </div>
-
-              )}
-
+        {!respondentVerified && (
+          <div className="verification-gate-banner">
+            <Lock size={18} />
+            <div>
+              <strong>Sign in with Google & Verify Email Required</strong>
+              <p>Please complete Google Sign-In or Email OTP verification above to unlock the form fields.</p>
             </div>
+          </div>
+        )}
 
-          );
+        {respondentVerified && (
+          <div className="verification-success-badge">
+            <ShieldCheck size={18} />
+            <span>Verified Respondent: <strong>{respondentEmail}</strong></span>
+          </div>
+        )}
 
-        })}
+        <div className={`form-fields-container ${!respondentVerified ? "fields-locked" : ""}`}>
+          {activeForm.fields.map((field) => {
+            if (isFieldHidden(field.id)) {
+              return null;
+            }
+
+            const rawType = (field.field_type || "").toLowerCase();
+            const isDropdown = rawType === "dropdown" || rawType === "select" || rawType === "multicheckbox";
+            const isEmail = rawType === "email";
+            const isNumber = rawType === "number";
+            const isDate = rawType === "date";
+            const isFile = rawType === "file" || rawType === "file upload" || rawType === "upload";
+            const isCheckbox = rawType === "checkbox";
+            const isRating = rawType === "rating";
+
+            let optionsList = [];
+            if (field.options) {
+              if (Array.isArray(field.options)) {
+                optionsList = field.options;
+              } else if (typeof field.options === "string") {
+                try {
+                  const parsed = JSON.parse(field.options);
+                  if (Array.isArray(parsed)) optionsList = parsed;
+                } catch (e) {
+                  optionsList = field.options.split(",").map((s) => s.trim());
+                }
+              }
+            }
+
+            return (
+              <div className="field-card" key={field.id}>
+                <label>
+                  {field.label}
+                  {field.required && <span className="required-star"> *</span>}
+                </label>
+
+                {isEmail && (
+                  <input
+                    type="email"
+                    disabled={!respondentVerified}
+                    placeholder={field.placeholder || "example@email.com"}
+                    value={responses[field.id] || ""}
+                    onChange={(e) => handleChange(field.id, e.target.value)}
+                  />
+                )}
+
+                {isNumber && (
+                  <input
+                    type="number"
+                    disabled={!respondentVerified}
+                    placeholder={field.placeholder || "Enter a number"}
+                    value={responses[field.id] || ""}
+                    onChange={(e) => handleChange(field.id, e.target.value)}
+                  />
+                )}
+
+                {isDropdown && (
+                  <select
+                    disabled={!respondentVerified}
+                    value={responses[field.id] || ""}
+                    onChange={(e) => handleChange(field.id, e.target.value)}
+                  >
+                    <option value="">
+                      {field.placeholder || "-- Select an option --"}
+                    </option>
+                    {optionsList.map((opt, index) => {
+                      const val = typeof opt === "object" ? opt.option_text || opt.value || String(opt) : String(opt);
+                      return (
+                        <option key={index} value={val}>
+                          {val}
+                        </option>
+                      );
+                    })}
+                  </select>
+                )}
+
+                {isDate && (
+                  <input
+                    type="date"
+                    disabled={!respondentVerified}
+                    value={responses[field.id] || ""}
+                    onChange={(e) => handleChange(field.id, e.target.value)}
+                  />
+                )}
+
+                {isFile && (
+                  <input
+                    type="file"
+                    disabled={!respondentVerified}
+                    onChange={(e) => handleChange(field.id, e.target.files[0])}
+                  />
+                )}
+
+                {isCheckbox && (
+                  <div className="checkbox-row">
+                    <input
+                      type="checkbox"
+                      disabled={!respondentVerified}
+                      checked={!!responses[field.id]}
+                      onChange={(e) => handleChange(field.id, e.target.checked)}
+                    />
+                    <span> Accept Terms & Conditions</span>
+                  </div>
+                )}
+
+                {isRating && (
+                  <select
+                    disabled={!respondentVerified}
+                    value={responses[field.id] || ""}
+                    onChange={(e) => handleChange(field.id, e.target.value)}
+                  >
+                    <option value="">Select Rating (1-5)</option>
+                    <option value="1">1 - Poor</option>
+                    <option value="2">2 - Fair</option>
+                    <option value="3">3 - Average</option>
+                    <option value="4">4 - Good</option>
+                    <option value="5">5 - Excellent</option>
+                  </select>
+                )}
+
+                {!isEmail && !isNumber && !isDropdown && !isDate && !isFile && !isCheckbox && !isRating && (
+                  <input
+                    type="text"
+                    disabled={!respondentVerified}
+                    placeholder={field.placeholder || "Enter response"}
+                    value={responses[field.id] || ""}
+                    onChange={(e) => handleChange(field.id, e.target.value)}
+                  />
+                )}
+              </div>
+            );
+          })}
 
 
-        <button
-          className="submit-btn"
-          onClick={handleSubmit}
-          disabled={!respondentVerified}
-        >
-          Submit Form
-        </button>
+          <button
+            className="submit-btn"
+            onClick={handleSubmit}
+            disabled={!respondentVerified}
+          >
+            {respondentVerified ? "Submit Form" : <span style={{ display: "inline-flex", alignItems: "center", gap: "6px" }}><Lock size={15} /> Verify Email To Unlock Submit</span>}
+          </button>
 
+        </div>
       </div>
+
 
     </div>
 

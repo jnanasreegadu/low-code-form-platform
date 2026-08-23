@@ -68,14 +68,12 @@ function DashboardPieChart({ published, draft }) {
       <h2>Form Distribution</h2>
 
       <div className="doughnut-wrapper">
-      <Doughnut
-        data={data}
-        options={options}
-        width={280}
-        height={280}
-        cutout="72%"
-      />
+        <Doughnut
+          data={data}
+          options={options}
+        />
       </div>
+
 
     </div>
   );

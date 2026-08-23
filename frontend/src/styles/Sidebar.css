@@ -442,29 +442,27 @@
 .forms-page,
 .responses-page,
 .analytics-page {
-  margin-left: 275px;
-  width: calc(100% - 275px);
+  margin-left: 255px !important;
+  width: calc(100% - 255px) !important;
   box-sizing: border-box;
 }
-.analytics-page {
-    margin-left: 275px !important;
-    width: calc(100% - 275px) !important;
-    box-sizing: border-box;
+
+@media (max-width: 1024px) {
+  .dashboard-sidebar {
+    position: relative;
+    width: 100%;
+    height: auto;
+    border-right: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   }
-  .create-page {
-    margin-left: 275px !important;
-    width: calc(100% - 275px) !important;
-    box-sizing: border-box;
+
+  .create-page,
+  .edit-page,
+  .forms-page,
+  .responses-page,
+  .analytics-page {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 20px !important;
   }
-  
-  .edit-page {
-    margin-left: 275px !important;
-    width: calc(100% - 275px) !important;
-    box-sizing: border-box;
-  }
-  
-  .forms-page {
-    margin-left: 275px !important;
-    width: calc(100% - 275px) !important;
-    box-sizing: border-box;
-  }
+}

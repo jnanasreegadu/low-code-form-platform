@@ -4,6 +4,8 @@ import "../styles/Responses.css";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Download } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import Loader from "../components/Loader";
+
 function Responses() {
   const navigate = useNavigate();
   const [responses, setResponses] = useState([]);
@@ -15,6 +17,7 @@ function Responses() {
   const [selectedResponses, setSelectedResponses] = useState([]);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [searchLoading, setSearchLoading] = useState(false);
   const [submittedFrom, setSubmittedFrom] = useState("");
@@ -25,23 +28,21 @@ function Responses() {
   const [formDropdownOpen, setFormDropdownOpen] = useState(false);
   const [versionDropdownOpen, setVersionDropdownOpen] = useState(false);
   const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
-  useEffect(() => {
 
-    api
-      .get("submissions/responses/")
-      .then((response) => {
-        setResponses(response.data.results);
+  useEffect(() => {
+    setPageLoading(true);
+    Promise.all([
+      api.get("submissions/responses/"),
+      api.get("forms/")
+    ])
+      .then(([respRes, formsRes]) => {
+        setResponses(respRes.data.results || []);
+        setForms(formsRes.data || []);
       })
-      .catch((err) => console.log(err));
-  
-    api
-      .get("forms/")
-      .then((response) => {
-        setForms(response.data);
-      })
-      .catch((err) => console.log(err));
-  
+      .catch((err) => console.log(err))
+      .finally(() => setPageLoading(false));
   }, []);
+
   const handleFormChange = async (formId) => {
 
     setSelectedForm(formId);
@@ -259,12 +260,14 @@ const handleBulkDelete = async () => {
       alert("Export failed");
   
     } finally {
-  
       setLoading(false);
-  
     }
   };
+
+  if (pageLoading) return <Loader text="Loading responses..." />;
+
   return (
+
     <>
       <Sidebar />
     <div className="responses-page">

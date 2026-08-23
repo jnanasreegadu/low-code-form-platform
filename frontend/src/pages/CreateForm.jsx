@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowLeft, Save, Send } from "lucide-react";
+import { ArrowLeft, Save, Send, Zap, Calendar, Sparkles, AlertTriangle } from "lucide-react";
 import "../styles/CreateForm.css";
 import FieldLibrary from "../components/FieldLibrary";
 import PreviewPanel from "../components/PreviewPanel";
@@ -8,7 +8,9 @@ import FieldSettings from "../components/FieldSettings";
 import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 import Sidebar from "../components/Sidebar";
+
 function CreateForm() {
+
 
   const [showAiPanel, setShowAiPanel] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
@@ -415,349 +417,306 @@ const addOption = (fieldId) => {
       <Sidebar />
   
       <div className="create-page">
-  
-        {/* TOP NAVBAR */}
+        {/* TOP FLOATING STUDIO NAVBAR */}
         <header className="create-navbar">
-  
           <button
             className="back-btn"
             onClick={() => navigate("/dashboard")}
           >
-            <ArrowLeft size={18} />
-            Back
+            <ArrowLeft size={16} />
+            Dashboard
           </button>
-  
+
+          <div className="nav-publication-bar">
+            <div className="publication-radios">
+              <label className={`pub-radio-pill ${publicationMode === "now" ? "active" : ""}`}>
+                <input
+                  type="radio"
+                  name="pubMode"
+                  checked={publicationMode === "now"}
+                  onChange={() => setPublicationMode("now")}
+                />
+                <Zap size={14} /> Publish Immediately
+              </label>
+
+              <label className={`pub-radio-pill ${publicationMode === "schedule" ? "active" : ""}`}>
+                <input
+                  type="radio"
+                  name="pubMode"
+                  checked={publicationMode === "schedule"}
+                  onChange={() => setPublicationMode("schedule")}
+                />
+                <Calendar size={14} /> Schedule Launch
+              </label>
+            </div>
+
+            {publicationMode === "schedule" && (
+              <div className="schedule-inputs-inline">
+                <input
+                  type="date"
+                  required
+                  min={new Date().toISOString().slice(0, 10)}
+                  value={scheduledDate}
+                  onChange={(e) => setScheduledDate(e.target.value)}
+                />
+                <input
+                  type="time"
+                  required
+                  value={scheduledTime}
+                  onChange={(e) => setScheduledTime(e.target.value)}
+                />
+              </div>
+            )}
+          </div>
+
           <div className="nav-actions">
-  
             <button
               className="draft-btn"
               onClick={saveDraft}
             >
-              <Save size={18} />
+              <Save size={16} />
               Save Draft
             </button>
-  
+
             <button
               className="publish-btn"
               onClick={publishForm}
             >
-              <Send size={18} />
-              Publish
+              <Send size={16} />
+              {publicationMode === "schedule" ? "Schedule Launch" : "Publish Form"}
             </button>
-            <section className="publication-section">
-
-  <h3>Publication</h3>
-
-  <label>
-    <input
-      type="radio"
-      checked={publicationMode === "now"}
-      onChange={() => setPublicationMode("now")}
-    />
-    Publish Now
-  </label>
-
-  <label>
-    <input
-      type="radio"
-      checked={publicationMode === "schedule"}
-      onChange={() => setPublicationMode("schedule")}
-    />
-    Schedule Publication
-  </label>
-
-  {publicationMode === "schedule" && (
-    <div className="schedule-fields">
-
-      <input
-        type="date"
-        required
-        min={new Date().toISOString().slice(0, 10)}
-        value={scheduledDate}
-        onChange={(e) => setScheduledDate(e.target.value)}
-      />
-
-      <input
-        type="time"
-        required
-        value={scheduledTime}
-        onChange={(e) => setScheduledTime(e.target.value)}
-      />
-
-    </div>
-  )}
-
-</section>
-  
           </div>
-  
         </header>
-  
-  
-        {/* PAGE TITLE */}
+
+        {/* STUDIO HEADER */}
         <div className="create-heading">
-  
-          <h1 className="page-title">
-            Create New Form
-          </h1>
-  
-          <p>
-            Build and customize your form with live preview
-          </p>
-  
+          <h1 className="page-title">Create Form</h1>
+          <p>Draft dynamic form workflows, configure AI generator, and define conditional rules</p>
+
+
+          <div className="studio-stats-bar">
+            <span className="studio-stat-chip">
+              <strong>{fields.length}</strong> Fields Active
+            </span>
+            <span className="studio-stat-chip">
+              Mode: <strong>{publicationMode === "now" ? "Instant Publish" : "Scheduled Launch"}</strong>
+            </span>
+            {limitOneResponsePerEmail && (
+              <span className="studio-stat-chip cyan">
+                1 Response / Email Enforced
+              </span>
+            )}
+          </div>
         </div>
-  
-  
-        {/* MAIN BUILDER */}
+
+        {/* 3-COLUMN STUDIO LAYOUT */}
         <div className="builder-layout">
-  
-  
+
           {/* =================================
-              LEFT SIDE
+              COLUMN 1: AI ASSISTANT & FORM DETAILS
           ================================= */}
-  
           <div className="builder-left">
-                        {/* AI GENERATE FORM */}
-                        <div className="field-library-card ai-generate-card">
 
-<div className="library-heading">
+            {/* AI GENERATE FORM */}
+            <div className="glass-card ai-generate-card">
+              <div className="library-heading">
+                <div>
+                  <span className="section-eyebrow"><Sparkles size={12} /> AI ASSISTANT</span>
+                  <h2>AI Form Generator</h2>
+                  <p>Describe your form intent or select a quick template prompt</p>
+                </div>
 
-  <div>
-    <span className="section-eyebrow">
-      AI ASSIST
-    </span>
+                <button
+                  type="button"
+                  className="ai-toggle-btn"
+                  onClick={() => setShowAiPanel((prev) => !prev)}
+                >
+                  {showAiPanel ? "Close" : "Open AI Studio"}
+                </button>
+              </div>
 
-    <h2>AI Generate Form</h2>
+              {showAiPanel && (
+                <div className="ai-generate-panel">
+                  <label>Form Generation Prompt</label>
 
-    <p>
-      Describe the form you want and let AI draft it
-    </p>
-  </div>
+                  <textarea
+                    placeholder="e.g. Create an event registration form for a tech conference with full name, email, dietary preferences dropdown, and experience rating."
+                    value={aiPrompt}
+                    onChange={(e) => setAiPrompt(e.target.value)}
+                    disabled={aiLoading}
+                  />
 
-  <button
-    type="button"
-    className="ai-toggle-btn"
-    onClick={() => setShowAiPanel((prev) => !prev)}
-  >
-    {showAiPanel ? "Close" : "AI Generate Form"}
-  </button>
+                  {/* QUICK PROMPT CHIPS */}
+                  <div className="prompt-chips">
+                    <button
+                      type="button"
+                      className="prompt-chip"
+                      onClick={() => setAiPrompt("Create a customer feedback form with name, email, rating from 1 to 5, feedback comments, and recommendation checkbox.")}
+                    >
+                      + Feedback Form
+                    </button>
+                    <button
+                      type="button"
+                      className="prompt-chip"
+                      onClick={() => setAiPrompt("Create an event registration form with full name, email, session dropdown, date of attendance, and dietary preferences.")}
+                    >
+                      + Event Registration
+                    </button>
+                    <button
+                      type="button"
+                      className="prompt-chip"
+                      onClick={() => setAiPrompt("Create an employee onboarding form with full name, email, department dropdown, start date, and emergency contact.")}
+                    >
+                      + Employee Onboarding
+                    </button>
+                  </div>
 
-</div>
+                  {aiError && (
+                    <div className="ai-error-banner">
+                      <AlertTriangle size={15} /> {aiError}
+                    </div>
+                  )}
 
-{showAiPanel && (
-  <div className="ai-generate-panel">
+                  <button
+                    type="button"
+                    className="ai-generate-btn"
+                    onClick={generateFormWithAI}
+                    disabled={aiLoading}
+                  >
+                    <Sparkles size={16} />
+                    {aiLoading ? "Generating AI Form Draft..." : "Generate AI Form"}
+                  </button>
 
-    <label>Describe your form</label>
+                  {aiDraft && (
+                    <div className="ai-draft-preview">
+                      <p className="ai-draft-note">AI generated a draft form ready to apply.</p>
 
-    <textarea
-      placeholder="e.g. Create a customer feedback form with name, email, rating from 1 to 5, feedback comments, and whether they would recommend us."
-      value={aiPrompt}
-      onChange={(e) => setAiPrompt(e.target.value)}
-      disabled={aiLoading}
-    />
+                      <div className="ai-draft-summary">
+                        <strong>{aiDraft.title}</strong>
+                        <p>{aiDraft.description}</p>
+                        <span>
+                          {aiDraft.fields.length} field
+                          {aiDraft.fields.length !== 1 ? "s" : ""} generated
+                        </span>
+                      </div>
 
-    {aiError && (
-      <div className="ai-error-banner">
-        ⚠️ {aiError}
-      </div>
-    )}
+                      <div className="ai-draft-actions">
+                        <button
+                          type="button"
+                          className="ai-use-btn"
+                          onClick={useAiDraft}
+                        >
+                          Apply To Canvas
+                        </button>
 
-    <button
-      type="button"
-      className="ai-generate-btn"
-      onClick={generateFormWithAI}
-      disabled={aiLoading}
-    >
-      {aiLoading ? "Generating your form..." : "Generate Form"}
-    </button>
+                        <button
+                          type="button"
+                          className="ai-regenerate-btn"
+                          onClick={generateFormWithAI}
+                          disabled={aiLoading}
+                        >
+                          Regenerate
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
 
-    {aiDraft && (
-      <div className="ai-draft-preview">
-
-        <p className="ai-draft-note">
-          AI generated a draft form.
-        </p>
-
-        <div className="ai-draft-summary">
-          <strong>{aiDraft.title}</strong>
-          <p>{aiDraft.description}</p>
-          <span>
-            {aiDraft.fields.length} field
-            {aiDraft.fields.length !== 1 ? "s" : ""}
-          </span>
-        </div>
-
-        <div className="ai-draft-actions">
-
-          <button
-            type="button"
-            className="ai-use-btn"
-            onClick={useAiDraft}
-          >
-            Use This Form
-          </button>
-
-          <button
-            type="button"
-            className="ai-regenerate-btn"
-            onClick={generateFormWithAI}
-            disabled={aiLoading}
-          >
-            Regenerate
-          </button>
-
-        </div>
-
-      </div>
-    )}
-
-  </div>
-)}
-
-</div>
-  
-  
             {/* FORM DETAILS */}
             <div className="glass-card form-details-card">
-  
               <div className="section-heading">
-  
                 <div>
-                  <span className="section-eyebrow">
-                    BASIC INFORMATION
-                  </span>
-  
+                  <span className="section-eyebrow">CONFIGURATION</span>
                   <h2>Form Details</h2>
                 </div>
-  
               </div>
-  
-  
+
               <label>Form Title</label>
-  
               <input
                 type="text"
-                placeholder="Student Registration Form"
+                placeholder="e.g. Annual Customer Satisfaction Survey"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
               />
-  
-  
-  <label>Description</label>
-  
-  <textarea
-    placeholder="Enter a short description for your form..."
-    value={description}
-    onChange={(e) => setDescription(e.target.value)}
-  />
 
-  <label className="limit-response-toggle">
-    <input
-      type="checkbox"
-      checked={limitOneResponsePerEmail}
-      onChange={(e) =>
-        setLimitOneResponsePerEmail(e.target.checked)
-      }
-    />
-    Limit to one response per email
-  </label>
+              <label>Description</label>
+              <textarea
+                placeholder="Provide clear instructions or background context for respondents..."
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+              />
 
-</div>
-  
-  
+              <label className="limit-response-toggle">
+                <input
+                  type="checkbox"
+                  checked={limitOneResponsePerEmail}
+                  onChange={(e) => setLimitOneResponsePerEmail(e.target.checked)}
+                />
+                Limit to 1 submission per verified email
+              </label>
+            </div>
+
             {/* FIELD LIBRARY */}
-            <div className="field-library-card">
-  
-              <div className="library-heading">
-  
-                <div>
-                  <span className="section-eyebrow">
-                    BUILD
-                  </span>
-  
-                  <h2>Field Library</h2>
-  
-                  <p>
-                    Click a field to add it to your form
-                  </p>
-                </div>
-  
-              </div>
-  
-              <FieldLibrary addField={addField} />
-  
-            </div>
-  
-  
-          </div>
-  
-  
-  
-          {/* =================================
-              RIGHT SIDE
-          ================================= */}
-  
-          <div className="builder-right">
-  
-  
-            {/* LIVE PREVIEW */}
-            <div className="preview-container">
-  
-              <div className="preview-container-header">
-  
-                <div>
-                  <span className="section-eyebrow">
-                    LIVE
-                  </span>
-  
-                  <h2>Form Preview</h2>
-  
-                  <p>
-                    See how your form is taking shape
-                  </p>
-                </div>
-  
-                <span className="field-count">
-                  {fields.length} field{fields.length !== 1 ? "s" : ""}
-                </span>
-  
-              </div>
-  
-  
-              <PreviewPanel
-            fields={fields}
-            handleDragEnd={handleDragEnd}
-            updateLabel={updateLabel}
-            deleteField={deleteField}
-            toggleRequired={toggleRequired}
-            selectedField={selectedField}
-            selectField={selectField}
-            editingField={editingField}
-            setEditingField={setEditingField}
-          />
+            <FieldLibrary addField={addField} />
 
-          <FieldSettings
-            editingField={editingField}
-            setEditingField={setEditingField}
-            fields={fields}
-            updateLabel={updateLabel}
-            updatePlaceholder={updatePlaceholder}
-            updateValidation={updateValidation}
-            toggleRequired={toggleRequired}
-            deleteField={deleteField}
-            updateOptions={updateOptions}
-            addOption={addOption}
-            rules={rules}
-            setRules={setRules}
-          />
-            </div>
-  
-  
-            
-  
           </div>
-  
+
+          {/* =================================
+              COLUMN 2: LIVE CANVAS PREVIEW
+          ================================= */}
+          <div className="builder-right">
+
+            {/* LIVE PREVIEW CANVAS */}
+            <div className="preview-container">
+
+              <div className="preview-container-header">
+                <div>
+                  <span className="section-eyebrow">LIVE CANVAS</span>
+                  <h2>Interactive Form Canvas</h2>
+                  <p>Drag to reorder fields or click Edit to configure validation rules</p>
+                </div>
+
+                <span className="field-count">
+                  {fields.length} field{fields.length !== 1 ? "s" : ""} on canvas
+                </span>
+              </div>
+
+              <PreviewPanel
+                fields={fields}
+                addField={addField}
+                handleDragEnd={handleDragEnd}
+                updateLabel={updateLabel}
+                deleteField={deleteField}
+                toggleRequired={toggleRequired}
+                selectedField={selectedField}
+                selectField={selectField}
+                editingField={editingField}
+                setEditingField={setEditingField}
+              />
+
+
+              <FieldSettings
+                editingField={editingField}
+                setEditingField={setEditingField}
+                fields={fields}
+                updateLabel={updateLabel}
+                updatePlaceholder={updatePlaceholder}
+                updateValidation={updateValidation}
+                toggleRequired={toggleRequired}
+                deleteField={deleteField}
+                updateOptions={updateOptions}
+                addOption={addOption}
+                rules={rules}
+                setRules={setRules}
+              />
+            </div>
+
+          </div>
+
         </div>
+
   
       </div>
     </>

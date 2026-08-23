@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { GoogleLogin } from "@react-oauth/google";
+import { Mail, CheckCircle } from "lucide-react";
 import api from "../services/api";
 import "../styles/IdentitySelector.css";
 
@@ -88,7 +89,9 @@ function IdentitySelector({ submissionId, onVerified }) {
 
   return (
     <div className="identity-selector">
-      <div className="identity-header">📧 Select your email</div>
+      <div className="identity-header">
+        <Mail size={16} /> Select your email
+      </div>
 
       {error && <div className="identity-error">{error}</div>}
 
@@ -157,7 +160,9 @@ function IdentitySelector({ submissionId, onVerified }) {
           )}
 
           {verified && (
-            <div className="identity-verified-note">✓ Verified</div>
+            <div className="identity-verified-note">
+              <CheckCircle size={16} /> Verified
+            </div>
           )}
         </div>
       )}
@@ -168,5 +173,6 @@ function IdentitySelector({ submissionId, onVerified }) {
     </div>
   );
 }
+
 
 export default IdentitySelector;

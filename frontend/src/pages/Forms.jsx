@@ -5,9 +5,13 @@ import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
 import { Eye, Pencil, Trash2, Copy, Link, } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import Loader from "../components/Loader";
+
 function Forms() {
   const [forms, setForms] = useState([]);
+  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+
   const [shareLink, setShareLink] = useState("");
   const [showSharePopup, setShowSharePopup] = useState(false);
   const [shareMode, setShareMode] = useState("public");
@@ -145,13 +149,18 @@ function Forms() {
   };
 
   useEffect(() => {
+    setLoading(true);
     api
       .get("forms/")
       .then((response) => {
         setForms(response.data);
       })
-      .catch((error) => console.error(error));
+      .catch((error) => console.error(error))
+      .finally(() => setLoading(false));
   }, []);
+
+  if (loading) return <Loader text="Loading forms..." />;
+
 
   // DELETE FORM
   const handleDelete = async (id) => {

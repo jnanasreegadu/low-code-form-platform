@@ -22,12 +22,13 @@ function Login() {
 
       alert("Login Successful!");
 
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       alert("Invalid Username or Password");
       console.log(err);
     }
   };
+
 
   return (
     <div className="login-page">
@@ -102,7 +103,8 @@ function Login() {
                 localStorage.setItem("token", response.data.token);
                 localStorage.setItem("username", response.data.username);
                 
-                navigate("/");
+                navigate("/dashboard");
+
                 
               } catch (err) {
                 console.log("BACKEND ERROR:", err);

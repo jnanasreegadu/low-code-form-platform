@@ -1,13 +1,14 @@
-.forms-page{
-
-    min-height:100vh;
-
-    padding:50px;
-
-    background:#09090b;
-
-    color:white;
+.forms-page {
+    margin-left: 255px !important;
+    width: calc(100% - 255px) !important;
+    min-height: 100vh;
+    padding: 32px 40px 60px;
+    box-sizing: border-box;
+    background: radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.14) 0%, rgba(13, 30, 48, 0.85) 40%, #070c14 100%) !important;
+    color: #f1f5f9;
 }
+
+
 
 .forms-header{
 
@@ -2378,3 +2379,48 @@
   border-color: #00e5ff;
   box-shadow: 0 0 0 2px rgba(0, 229, 255, 0.12);
 }
+
+/* =========================================================
+   RESPONSIVE BREAKPOINTS FOR ALL DEVICES
+   ========================================================= */
+
+@media (max-width: 1024px) {
+  .forms-page {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 20px 16px !important;
+  }
+
+  .forms-table-container {
+    width: 100% !important;
+    margin-top: 20px;
+    padding: 16px;
+    overflow-x: auto;
+  }
+
+  .forms-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
+  .forms-header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+  .forms-page h1 {
+    font-size: 28px;
+  }
+
+  .share-popup {
+    padding: 18px;
+    width: 95vw;
+  }
+
+  .share-tabs {
+    grid-template-columns: 1fr;
+  }
+}

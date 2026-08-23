@@ -1,61 +1,88 @@
-.responses-page{
-    padding:40px;
-    color:white;
+.responses-page {
+  margin-left: 255px !important;
+  width: calc(100% - 255px) !important;
+  min-height: 100vh;
+  padding: 32px 40px 60px;
+  box-sizing: border-box;
+  background: radial-gradient(circle at 50% 0%, rgba(0, 229, 255, 0.14) 0%, rgba(13, 30, 48, 0.85) 40%, #070c14 100%) !important;
+  color: #f1f5f9;
 }
 
-.responses-page h1{
-    text-align:center;
-    margin-bottom:30px;
+
+.responses-page h1 {
+  font-size: 38px;
+  font-weight: 800;
+  text-align: center;
+  background: linear-gradient(135deg, #ffffff 30%, #00e5ff 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 28px;
 }
 
-.response-card{
-    background:rgba(255,255,255,.05);
-    backdrop-filter:blur(12px);
-    border:1px solid rgba(255,255,255,.1);
-    border-radius:20px;
-    padding:25px;
-    margin-bottom:30px;
+.response-card {
+  background: rgba(13, 22, 35, 0.85);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(0, 229, 255, 0.18);
+  border-radius: 20px;
+  padding: 26px;
+  margin-bottom: 30px;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4);
 }
 
-table{
-    width:100%;
-    margin-top:20px;
-    border-collapse:collapse;
+.back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #cbd5e1;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px 18px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 20px;
+  transition: all 0.2s ease;
 }
 
-th,td{
-    padding:12px;
-    border-bottom:1px solid rgba(255,255,255,.1);
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  transform: translateX(-2px);
 }
 
-th{
-    color:#53c8ff;
+table {
+  width: 100%;
+  margin-top: 20px;
+  border-collapse: collapse;
 }
+
+th, td {
+  padding: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+th {
+  color: #00e5ff;
+  font-weight: 700;
+}
+
 /* =========================================================
    EXPORT RESPONSES SECTION
    ========================================================= */
 
-   .export-section {
-    width: min(1100px, 92%);
-    margin: 25px auto 35px;
-
-    padding: 26px 30px;
-
-    background: linear-gradient(
-    145deg,
-    #121a2a,
-    #101522
-    );
-
-    border: 1px solid #263449;
-
-    border-radius: 18px;
-
-    box-shadow:
-    0 15px 40px rgba(0, 0, 0, 0.25);
-
-    animation: exportFadeIn 0.5s ease;
+.export-section {
+  width: min(1100px, 98%);
+  margin: 25px auto 35px;
+  padding: 28px 34px;
+  background: rgba(13, 22, 35, 0.85);
+  border: 1px solid rgba(0, 229, 255, 0.2);
+  border-radius: 20px;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+  animation: exportFadeIn 0.5s ease;
 }
+
 
 
 /* ---------- TITLE ---------- */
@@ -1465,3 +1492,37 @@ th{
   
     cursor: not-allowed;
   }
+
+/* =========================================================
+   RESPONSIVE BREAKPOINTS FOR ALL DEVICES
+   ========================================================= */
+
+@media (max-width: 1024px) {
+  .responses-page {
+    margin-left: 0 !important;
+    width: 100% !important;
+    padding: 20px 16px !important;
+  }
+
+  .export-section,
+  .response-search-section,
+  .response-card {
+    width: 100% !important;
+    padding: 20px 16px !important;
+  }
+
+  .export-controls,
+  .response-search-controls {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 640px) {
+  .responses-page h1 {
+    font-size: 28px;
+  }
+
+  .date-filter-controls {
+    grid-template-columns: 1fr !important;
+  }
+}

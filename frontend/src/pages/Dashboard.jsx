@@ -23,6 +23,7 @@ import {
   Trash2,
   User,
   Files,
+  Calendar,
 } from "lucide-react";
 import Loader from "../components/Loader";
 
@@ -259,7 +260,8 @@ function Dashboard() {
   <div className="welcome-content">
 
     <span className="welcome-date">
-      ✦ {new Date().toLocaleDateString("en-IN", {
+      <Calendar size={13} style={{ verticalAlign: "middle", marginRight: 6 }} />
+      {new Date().toLocaleDateString("en-IN", {
         weekday: "long",
         day: "2-digit",
         month: "long",
@@ -276,9 +278,9 @@ function Dashboard() {
       ,{" "}
       <span>
         {profile?.name || profile?.username || "User"}
-      </span>{" "}
-      👋
+      </span>
     </h2>
+
 
     <p>
       Manage your forms, responses and performance from one place.

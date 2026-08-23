@@ -107,8 +107,9 @@ function FieldSettings({
             }`}
           >
             <span>3</span>
-            <small>Logic</small>
+            <small>Conditional Logic</small>
           </div>
+
 
         </div>
 
