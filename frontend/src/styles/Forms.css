@@ -1257,11 +1257,12 @@
 }
 /* ================================
    SHARE OVERLAY
-================================ */
-
 .share-overlay {
   position: fixed;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
 
   display: flex;
   align-items: center;
@@ -1269,9 +1270,11 @@
 
   padding: 20px;
 
-  background: rgba(0, 0, 0, 0.78);
+  background: rgba(0, 0, 0, 0.82);
+  backdrop-filter: blur(6px);
 
-  z-index: 9999;
+  z-index: 99999;
+  overflow-y: auto !important;
 }
 
 
@@ -1280,35 +1283,56 @@
 ================================ */
 
 .share-popup {
-  width: min(780px, 88vw);
+  width: min(780px, 92vw);
 
-  /* IMPORTANT */
-  max-height: 90vh;
-  overflow-y: auto;
-
+  max-height: 85vh !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 
   background:
     radial-gradient(
       circle at top left,
-      rgba(0, 200, 255, 0.08),
+      rgba(0, 200, 255, 0.12),
       transparent 35%
     ),
     #091421;
 
-  border: 1px solid rgba(70, 190, 255, 0.28);
+  border: 1px solid rgba(70, 190, 255, 0.35);
 
   border-radius: 20px;
 
   box-shadow:
-    0 25px 70px rgba(0, 0, 0, 0.65),
-    0 0 35px rgba(0, 200, 255, 0.06);
+    0 25px 70px rgba(0, 0, 0, 0.75),
+    0 0 35px rgba(0, 200, 255, 0.1);
 
   color: white;
 
-  padding: 20px 24px;
+  padding: 24px;
 
   box-sizing: border-box;
+  margin: auto;
 }
+
+.share-popup::-webkit-scrollbar {
+  width: 8px;
+}
+
+.share-popup::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 4px;
+}
+
+.share-popup::-webkit-scrollbar-thumb {
+  background: rgba(0, 229, 255, 0.5);
+  border-radius: 4px;
+}
+
+.share-popup::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 229, 255, 0.8);
+}
+
 
 
 /* ================================
@@ -2424,4 +2448,4 @@
   .share-tabs {
     grid-template-columns: 1fr;
   }
-}
+}

@@ -335,18 +335,6 @@ function OneTimeForm() {
               <br />
               This link cannot be used again.
             </div>
-
-            {emailSent === true && (
-              <div className="email-status-note email-sent">
-                <Mail size={15} /> Confirmation email sent to your email address.
-              </div>
-            )}
-
-            {emailSent === false && (
-              <div className="email-status-note email-failed">
-                <AlertTriangle size={15} /> Your response was submitted successfully, but we could not send the confirmation email.
-              </div>
-            )}
           </div>
 
           <div className="response-preview" id="response-preview">
