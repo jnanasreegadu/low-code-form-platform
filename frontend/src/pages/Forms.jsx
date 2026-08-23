@@ -25,25 +25,18 @@ function Forms() {
   const [selectedFormUuid, setSelectedFormUuid] = useState(null);
   const [oneTimeExpiresAt, setOneTimeExpiresAt] = useState("");
   const shareForm = (form) => {
-
-    if (!form.latest_uuid) {
-      alert("This form has no published version yet. Publish it before sharing.");
-      return;
-    }
-
-    const formLink =
-      `${window.location.origin}/form/${form.latest_uuid}`;
+    const uuid = form.latest_uuid || form.id;
+    const formLink = form.latest_uuid
+      ? `${window.location.origin}/form/${form.latest_uuid}`
+      : `${window.location.origin}/view/${form.id}`;
 
     setShareLink(formLink);
-
-    setSelectedFormUuid(form.latest_uuid);
-
+    setSelectedFormUuid(uuid);
     setOneTimeLink("");
-
     setPublicExpiry("");
-
     setShowSharePopup(true);
   };
+
   const createOneTimeLink = async () => {
 
     if (!selectedFormUuid) {

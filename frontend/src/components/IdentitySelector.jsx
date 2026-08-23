@@ -7,25 +7,21 @@ import "../styles/Identityselector.css";
 
 function IdentitySelector({ submissionId, onVerified }) {
   const [googleEmail, setGoogleEmail] = useState(null);
-  const [otpSent, setOtpSent] = useState(false);
-  const [otpCode, setOtpCode] = useState("");
+  const [customEmail, setCustomEmail] = useState("");
   const [verified, setVerified] = useState(false);
   const [error, setError] = useState("");
-  const [sending, setSending] = useState(false);
-  const [verifying, setVerifying] = useState(false);
 
   const handleGoogleSuccess = async (credentialResponse) => {
     setError("");
-
     try {
       const res = await api.post("respondent/google-verify/", {
         token: credentialResponse.credential,
       });
 
-      setGoogleEmail(res.data.email);
-      setOtpSent(false);
-      setVerified(false);
-      setOtpCode("");
+      const userEmail = res.data.email;
+      setGoogleEmail(userEmail);
+      setVerified(true);
+      onVerified(userEmail);
     } catch (err) {
       console.log("RESPONDENT GOOGLE VERIFY ERROR:", err);
       setError(
@@ -34,74 +30,80 @@ function IdentitySelector({ submissionId, onVerified }) {
     }
   };
 
-  const sendOtp = async () => {
-    if (!submissionId || !googleEmail) return;
-
-    setSending(true);
-    setError("");
-
-    try {
-      await api.post("respondent/otp/send/", {
-        submission_id: submissionId,
-        email: googleEmail,
-      });
-
-      setOtpSent(true);
-    } catch (err) {
-      console.log("SEND OTP ERROR:", err);
-      setError(
-        err.response?.data?.error || "Could not send verification code."
-      );
-    } finally {
-      setSending(false);
+  const handleCustomEmailSubmit = (e) => {
+    e.preventDefault();
+    if (!customEmail || !customEmail.includes("@")) {
+      setError("Please enter a valid email address.");
+      return;
     }
-  };
-
-  const verifyOtp = async () => {
-    if (!otpCode) return;
-
-    setVerifying(true);
     setError("");
-
-    try {
-      await api.post("respondent/otp/verify/", {
-        submission_id: submissionId,
-        email: googleEmail,
-        code: otpCode,
-      });
-
-      setVerified(true);
-      onVerified(googleEmail);
-    } catch (err) {
-      console.log("VERIFY OTP ERROR:", err);
-      setError(err.response?.data?.error || "Incorrect or expired code.");
-    } finally {
-      setVerifying(false);
-    }
+    const userEmail = customEmail.trim().toLowerCase();
+    setGoogleEmail(userEmail);
+    setVerified(true);
+    onVerified(userEmail);
   };
 
   const switchAccount = () => {
     setGoogleEmail(null);
-    setOtpSent(false);
-    setOtpCode("");
+    setCustomEmail("");
     setVerified(false);
     setError("");
+    if (onVerified) onVerified(null);
   };
 
   return (
     <div className="identity-selector">
       <div className="identity-header">
-        <Mail size={16} /> Select your email
+        <Mail size={16} /> Identity & Sign-In
       </div>
 
       {error && <div className="identity-error">{error}</div>}
 
       {!googleEmail && (
-        <div className="identity-google-wrapper">
-          <GoogleLogin
-            onSuccess={handleGoogleSuccess}
-            onError={() => setError("Google sign-in failed.")}
-          />
+        <div className="identity-auth-box" style={{ display: "flex", flexDirection: "column", gap: "12px", marginTop: "10px" }}>
+          <div className="identity-google-wrapper">
+            <GoogleLogin
+              onSuccess={handleGoogleSuccess}
+              onError={() => setError("Google sign-in failed.")}
+            />
+          </div>
+
+          <div style={{ textAlign: "center", color: "#64748b", fontSize: "12px", fontWeight: "600" }}>
+            OR ENTER EMAIL
+          </div>
+
+          <form onSubmit={handleCustomEmailSubmit} style={{ display: "flex", gap: "8px" }}>
+            <input
+              type="email"
+              placeholder="e.g. name@example.com"
+              value={customEmail}
+              onChange={(e) => setCustomEmail(e.target.value)}
+              style={{
+                flex: 1,
+                padding: "10px 14px",
+                borderRadius: "8px",
+                border: "1px solid rgba(255,255,255,0.2)",
+                background: "rgba(255,255,255,0.05)",
+                color: "#fff",
+                fontSize: "14px",
+              }}
+              required
+            />
+            <button
+              type="submit"
+              style={{
+                padding: "10px 18px",
+                borderRadius: "8px",
+                border: "none",
+                background: "#00e5ff",
+                color: "#0f172a",
+                fontWeight: "600",
+                cursor: "pointer",
+              }}
+            >
+              Continue
+            </button>
+          </form>
         </div>
       )}
 
@@ -119,61 +121,21 @@ function IdentitySelector({ submissionId, onVerified }) {
             </button>
           </div>
 
-          {!otpSent && !verified && (
-            <button
-              type="button"
-              className="identity-send-otp-btn"
-              onClick={sendOtp}
-              disabled={sending}
-            >
-              {sending ? "Sending code..." : "Send verification code"}
-            </button>
-          )}
-
-          {otpSent && !verified && (
-            <div className="identity-otp-row">
-              <input
-                type="text"
-                placeholder="Enter 6-digit code"
-                maxLength={6}
-                value={otpCode}
-                onChange={(e) => setOtpCode(e.target.value)}
-              />
-
-              <button
-                type="button"
-                className="identity-verify-btn"
-                onClick={verifyOtp}
-                disabled={verifying}
-              >
-                {verifying ? "Verifying..." : "Verify"}
-              </button>
-
-              <button
-                type="button"
-                className="identity-resend-btn"
-                onClick={sendOtp}
-                disabled={sending}
-              >
-                Resend code
-              </button>
-            </div>
-          )}
-
           {verified && (
             <div className="identity-verified-note">
-              <CheckCircle size={16} /> Verified
+              <CheckCircle size={16} /> Signed in as {googleEmail}
             </div>
           )}
         </div>
       )}
 
       <div className="identity-help-text">
-        This email will be used for verification and submission confirmation.
+        Your email will be associated with this response.
       </div>
     </div>
   );
 }
+
 
 
 export default IdentitySelector;
