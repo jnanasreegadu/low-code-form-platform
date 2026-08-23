@@ -148,12 +148,26 @@ EMAIL_BACKEND = os.getenv(
 )
 
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
-EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+
+use_ssl_env = os.getenv("EMAIL_USE_SSL")
+use_tls_env = os.getenv("EMAIL_USE_TLS")
+
+if use_ssl_env is not None:
+    EMAIL_USE_SSL = use_ssl_env.lower() in ("true", "1", "yes")
+    EMAIL_USE_TLS = False if not use_tls_env else use_tls_env.lower() in ("true", "1", "yes")
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465" if EMAIL_USE_SSL else "587"))
+elif use_tls_env is not None and use_tls_env.lower() in ("true", "1", "yes"):
+    EMAIL_USE_SSL = False
+    EMAIL_USE_TLS = True
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "587"))
+else:
+    # Port 465 SSL Default: Bypasses cloud host (Render) outbound port 587 blocks
+    EMAIL_USE_SSL = True
+    EMAIL_USE_TLS = False
+    EMAIL_PORT = int(os.getenv("EMAIL_PORT", "465"))
 
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "jnanasreegadu23@gmail.com")
 EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "rtyrcvgpwjtxqqql")
-
-EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
 
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
@@ -161,5 +175,6 @@ DEFAULT_FROM_EMAIL = os.getenv(
 )
 
 EMAIL_TIMEOUT = 10
+
 
 
