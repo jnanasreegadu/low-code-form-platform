@@ -274,16 +274,26 @@ const addOption = (fieldId) => {
   
   };
   const publishForm = async () => {
+    const formTitle = (title || "").trim();
+    if (!formTitle) {
+      alert("Please enter a Form Title before publishing.");
+      return;
+    }
+    if (!fields || fields.length === 0) {
+      alert("Please add at least one field to your form before publishing.");
+      return;
+    }
+
     try {
       console.log("RULES BEING SENT:", rules);
-  
+
       const data = {
-        title,
-        description,
+        title: formTitle,
+        description: (description || "").trim(),
         fields,
         status: "draft",
         limit_one_response_per_email: limitOneResponsePerEmail,
-  
+
         conditional_rules: rules.map((rule) => ({
           source_field_id: rule.sourceField,
           operator: rule.operator,
@@ -292,33 +302,33 @@ const addOption = (fieldId) => {
           action: rule.action,
         })),
       };
-  
+
       // 1. Create the form
       const response = await api.post("forms/", data);
-  
+
       const formId = response.data.id;
-  
+
       // 2. Prepare scheduled time
       let scheduled_publish_at = null;
-  
+
       if (publicationMode === "schedule") {
         if (!scheduledDate || !scheduledTime) {
           alert("Please select scheduled date and time");
           return;
         }
-  
+
         const selectedDateTime = new Date(
           `${scheduledDate}T${scheduledTime}`
         );
-  
+
         if (selectedDateTime <= new Date()) {
           alert("Please select a future date and time");
           return;
         }
-  
+
         scheduled_publish_at = selectedDateTime.toISOString();
       }
-  
+
       // 3. Publish now OR schedule
       await api.post(
         `forms/${formId}/publish/`,
@@ -326,34 +336,37 @@ const addOption = (fieldId) => {
           ? { scheduled_publish_at }
           : {}
       );
-  
+
       if (publicationMode === "schedule") {
         alert("Form Scheduled Successfully!");
       } else {
         alert("Form Published Successfully!");
       }
-  
-      navigate("/dashboard");
-  
+
+      navigate("/forms");
+
     } catch (error) {
       console.error(error);
       console.error("PUBLISH ERROR:", error.response?.data);
-  
+
       alert(
         error.response?.data?.error ||
+        error.response?.data?.detail ||
         "Failed to Publish Form"
       );
     }
   };
+
   const saveDraft = async () => {
+    const formTitle = (title || "").trim() || "Untitled Draft Form";
     try {
       const data = {
-        title,
-        description,
+        title: formTitle,
+        description: (description || "").trim(),
         fields,
         status: "draft",
         limit_one_response_per_email: limitOneResponsePerEmail,
-      
+
         conditional_rules: rules.map((rule) => ({
           source_field_id: rule.sourceField,
           operator: rule.operator,
@@ -362,17 +375,18 @@ const addOption = (fieldId) => {
           action: rule.action,
         })),
       };
-  
+
       await api.post("forms/", data);
-  
+
       alert("Draft Saved Successfully!");
-  
-      navigate("/dashboard");
+
+      navigate("/forms");
     } catch (error) {
       console.error(error);
-      alert("Failed to Save Draft");
+      alert(error.response?.data?.error || error.response?.data?.detail || "Failed to Save Draft");
     }
   };
+
   const toggleRequired = (id) => {
     const updatedFields = fields.map((field) =>
       field.id === id

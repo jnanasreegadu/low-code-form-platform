@@ -808,89 +808,75 @@ function Forms() {
           </thead>
 
           <tbody>
+            {forms.length === 0 ? (
+              <tr>
+                <td colSpan="4" style={{ textAlign: "center", padding: "40px 20px" }}>
+                  <div style={{ color: "#94a3b8", marginBottom: "16px", fontSize: "1.1rem" }}>
+                    No Saved Forms Found
+                  </div>
+                  <button
+                    className="create-form-btn"
+                    style={{ margin: "0 auto", display: "inline-flex" }}
+                    onClick={() => navigate("/create")}
+                  >
+                    + Create Your First Form
+                  </button>
+                </td>
+              </tr>
+            ) : (
+              forms.map((form) => (
+                <tr key={form.id}>
+                  <td>{form.id}</td>
+                  <td>{form.title || "Untitled Form"}</td>
+                  <td>
+                    <span className={`status ${form.status}`}>
+                      {form.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div className="form-actions">
+                      <button
+                        className="action-btn view-btn"
+                        onClick={() => navigate(`/view/${form.id}`)}
+                        title="View Form"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button
+                        className="action-btn edit-btn"
+                        onClick={() => navigate(`/edit/${form.id}`)}
+                        title="Edit Form"
+                      >
+                        <Pencil size={18} />
+                      </button>
+                      <button
+                        className="action-btn share-btn"
+                        onClick={() => shareForm(form)}
+                        title="Share Form"
+                      >
+                        <Link size={18} />
+                      </button>
+                      <button
+                        className="action-btn duplicate-btn"
+                        onClick={() => duplicateForm(form.id)}
+                        title="Duplicate Form"
+                      >
+                        <Copy size={18} />
+                      </button>
+                      <button
+                        className="action-btn delete-btn"
+                        onClick={() => handleDelete(form.id)}
+                        title="Delete Form"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
 
-  {forms.map((form) => {
-
-    console.log("FORM DATA:", form);
-
-    return (
-      <tr key={form.id}>
-
-        <td>{form.id}</td>
-
-        <td>{form.title}</td>
-
-        <td>
-          <span className={`status ${form.status}`}>
-            {form.status}
-          </span>
-        </td>
-
-        <td>
-
-          <div className="form-actions">
-
-            {/* VIEW */}
-            <button
-              className="action-btn view-btn"
-              onClick={() =>
-                navigate(`/view/${form.id}`)
-              }
-              title="View Form"
-            >
-              <Eye size={18} />
-            </button>
-
-            {/* EDIT */}
-            <button
-              className="action-btn edit-btn"
-              onClick={() =>
-                navigate(`/edit/${form.id}`)
-              }
-              title="Edit Form"
-            >
-              <Pencil size={18} />
-            </button>
-
-            {/* SHARE */}
-            <button
-              className="action-btn share-btn"
-              onClick={() => shareForm(form)}
-              title="Share Form"
-            >
-              <Link size={18} />
-            </button>
-
-            {/* DUPLICATE */}
-            <button
-              className="action-btn duplicate-btn"
-              onClick={() => duplicateForm(form.id)}
-              title="Duplicate Form"
-            >
-              <Copy size={18} />
-            </button>
-
-            {/* DELETE */}
-            <button
-              className="action-btn delete-btn"
-              onClick={() =>
-                handleDelete(form.id)
-              }
-              title="Delete Form"
-            >
-              <Trash2 size={18} />
-            </button>
-
-          </div>
-
-        </td>
-
-      </tr>
-    );
-
-  })}
-
-</tbody>
 
         </table>
 

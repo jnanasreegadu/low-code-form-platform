@@ -102,18 +102,21 @@ class FormViewSet(viewsets.ModelViewSet):
 
     def create(self, request):
         data = request.data
+        form_title = str(data.get("title", "")).strip() or "Untitled Form"
+
 
         # Create Form
         form = Form.objects.create(
             owner=request.user,
-            title=data["title"],
-            description=data["description"],
+            title=form_title,
+            description=data.get("description", ""),
             status=data.get("status", "draft"),
             Fields=data.get("fields", []),
             limit_one_response_per_email=data.get(
                 "limit_one_response_per_email", False
             ),
         )
+
 
         # Create Version 1
         version = FormVersion.objects.create(
