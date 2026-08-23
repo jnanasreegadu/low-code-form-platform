@@ -1,4 +1,5 @@
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, permissions
+
 from rest_framework.response import Response
 from rest_framework.decorators import action,api_view
 from django.shortcuts import get_object_or_404
@@ -2721,6 +2722,9 @@ def start_public_form(request, uuid):
         "started_at": submission.started_at
     }, status=status.HTTP_201_CREATED)
 class LoginView(APIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
+
     def post(self, request):
         username = request.data.get("username")
         password = request.data.get("password")
@@ -2782,8 +2786,11 @@ def _verify_google_id_token(token):
 
 
 class GoogleLoginView(APIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+
 
         google_token = request.data.get("token")
 
@@ -2850,23 +2857,15 @@ class GoogleLoginView(APIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 class RespondentGoogleVerifyView(APIView):
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
     """
     Verifies a Google ID token for a FORM RESPONDENT — not an
-    admin/dashboard user. Unlike GoogleLoginView, this does NOT
-    create a Django User and does NOT issue a DRF token. It only
-    confirms, via Google, which email address the person is
-    currently signed into, using the same verification helper
-    as admin login.
-
-    This is what makes the frontend's "Select your email" box
-    safe: the email shown there is never trusted from the
-    frontend directly, only from this server-side check.
+    admin/dashboard user.
     """
 
     def post(self, request):
-
         google_token = request.data.get("token")
-
         if not google_token:
             return Response(
                 {"error": "Google token is required"},
@@ -2875,13 +2874,11 @@ class RespondentGoogleVerifyView(APIView):
 
         try:
             email, name = _verify_google_id_token(google_token)
-
         except ValueError as e:
             return Response(
                 {"error": str(e)},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
         except Exception as e:
             print("RESPONDENT GOOGLE VERIFY ERROR:", e)
             return Response(
@@ -2900,16 +2897,10 @@ def _generate_otp_code():
 
 
 class RespondentSendOTPView(APIView):
-    """
-    Sends a 6-digit OTP to the given email, tied to a specific
-    submission. The email must already have been confirmed via
-    RespondentGoogleVerifyView on the frontend — this OTP is an
-    additional verification step on top of that, not a
-    replacement for it.
-    """
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
-
         submission_id = request.data.get("submission_id")
         email = normalize_email(request.data.get("email"))
 
@@ -2928,7 +2919,6 @@ class RespondentSendOTPView(APIView):
             )
 
         submission = get_object_or_404(Submission, id=submission_id)
-
         code = _generate_otp_code()
 
         OTPVerification.objects.create(
@@ -2961,14 +2951,11 @@ class RespondentSendOTPView(APIView):
 
 
 class RespondentVerifyOTPView(APIView):
-    """
-    Verifies the OTP code for a submission + email, and only on
-    success stamps that email onto the Submission as the
-    verified respondent identity used for duplicate checking
-    and the confirmation email.
-    """
+    authentication_classes = []
+    permission_classes = [permissions.AllowAny]
 
     def post(self, request):
+
 
         submission_id = request.data.get("submission_id")
         email = normalize_email(request.data.get("email"))
