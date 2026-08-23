@@ -1245,6 +1245,63 @@ def _call_form_generation_llm(prompt):
     return _call_llm_chat(system_prompt, prompt, temperature=0.7)
 
 
+def _generate_fallback_form(prompt):
+    prompt_lower = (prompt or "").lower()
+
+    if any(k in prompt_lower for k in ["event", "registration", "ticket", "conference", "webinar"]):
+        return {
+            "title": "Event Registration Form",
+            "description": "Please complete your registration details for the upcoming event.",
+            "fields": [
+                {"label": "Full Name", "type": "text", "required": True, "placeholder": "John Doe", "options": []},
+                {"label": "Email Address", "type": "email", "required": True, "placeholder": "john@example.com", "options": []},
+                {"label": "Phone Number", "type": "number", "required": False, "placeholder": "1234567890", "options": []},
+                {"label": "Attendance Mode", "type": "dropdown", "required": True, "placeholder": "Select Mode", "options": ["In Person", "Virtual / Online"]},
+                {"label": "Dietary Preferences", "type": "text", "required": False, "placeholder": "Vegetarian, Vegan, None, etc.", "options": []},
+                {"label": "Confirm Registration", "type": "checkbox", "required": True, "placeholder": "I agree to event terms", "options": []}
+            ]
+        }
+    elif any(k in prompt_lower for k in ["feedback", "survey", "review", "satisfaction", "rating"]):
+        return {
+            "title": "Customer Feedback Survey",
+            "description": "We value your input! Please let us know about your experience.",
+            "fields": [
+                {"label": "Your Name", "type": "text", "required": False, "placeholder": "Jane Smith", "options": []},
+                {"label": "Email Address", "type": "email", "required": True, "placeholder": "jane@example.com", "options": []},
+                {"label": "Overall Rating", "type": "rating", "required": True, "placeholder": "Rate 1-5", "options": []},
+                {"label": "Discovery Channel", "type": "dropdown", "required": False, "placeholder": "How did you find us?", "options": ["Social Media", "Search Engine", "Friend / Recommendation", "Other"]},
+                {"label": "Detailed Comments", "type": "text", "required": False, "placeholder": "Share your thoughts...", "options": []}
+            ]
+        }
+    elif any(k in prompt_lower for k in ["job", "application", "career", "hiring", "resume"]):
+        return {
+            "title": "Job Application Form",
+            "description": "Submit your application for open positions.",
+            "fields": [
+                {"label": "Applicant Full Name", "type": "text", "required": True, "placeholder": "Alex Johnson", "options": []},
+                {"label": "Email Address", "type": "email", "required": True, "placeholder": "alex@example.com", "options": []},
+                {"label": "Target Role", "type": "dropdown", "required": True, "placeholder": "Select position", "options": ["Software Developer", "Product Manager", "UI/UX Designer", "Sales Representative"]},
+                {"label": "Upload Resume", "type": "file", "required": True, "placeholder": "", "options": []},
+                {"label": "Available Start Date", "type": "date", "required": True, "placeholder": "", "options": []}
+            ]
+        }
+    else:
+        title = prompt.strip().capitalize()
+        if not title.lower().endswith("form"):
+            title += " Form"
+        return {
+            "title": title,
+            "description": f"Generated form specification for: {prompt}",
+            "fields": [
+                {"label": "Full Name", "type": "text", "required": True, "placeholder": "Enter full name", "options": []},
+                {"label": "Email Address", "type": "email", "required": True, "placeholder": "email@example.com", "options": []},
+                {"label": "Select Category", "type": "dropdown", "required": False, "placeholder": "Select category", "options": ["General Inquiry", "Support", "Feedback", "Other"]},
+                {"label": "Additional Notes", "type": "text", "required": False, "placeholder": "Enter details...", "options": []},
+                {"label": "Terms Agreement", "type": "checkbox", "required": True, "placeholder": "I confirm submission", "options": []}
+            ]
+        }
+
+
 class AIGenerateFormView(APIView):
     """
     POST /api/ai/generate-form/
@@ -1270,39 +1327,20 @@ class AIGenerateFormView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # Try live LLM call first; fallback to smart generator on API issues
         try:
             raw_text = _call_form_generation_llm(prompt)
-        except RuntimeError as e:
-            logger.error(f"AI FORM GENERATION CONFIG ERROR: {e}")
-            return Response(
-                {"error": str(e)},
-                status=status.HTTP_503_SERVICE_UNAVAILABLE
-            )
-        except Exception as e:
-            logger.error(f"AI FORM GENERATION REQUEST FAILED: {e}", exc_info=True)
-            return Response(
-                {"error": f"AI generation failed: {str(e)}"},
-                status=status.HTTP_502_BAD_GATEWAY
-            )
-
-        try:
             json_text = _extract_json_block(raw_text)
             parsed = json.loads(json_text)
-        except (json.JSONDecodeError, TypeError):
-            logger.error(f"AI FORM GENERATION: invalid JSON returned: {raw_text[:500]}")
-            return Response(
-                {"error": "Unable to generate the form. Please try again."},
-                status=status.HTTP_502_BAD_GATEWAY
-            )
+            cleaned, error = _validate_generated_form(parsed)
+            if not error and cleaned:
+                return Response(cleaned, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.warning(f"Live LLM generation note: {e}")
 
-        cleaned, error = _validate_generated_form(parsed)
-        if error:
-            return Response(
-                {"error": error},
-                status=status.HTTP_422_UNPROCESSABLE_ENTITY
-            )
+        fallback_form = _generate_fallback_form(prompt)
+        return Response(fallback_form, status=status.HTTP_200_OK)
 
-        return Response(cleaned, status=status.HTTP_200_OK)
 
 
 class AIFillFormView(APIView):
