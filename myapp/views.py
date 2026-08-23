@@ -35,8 +35,10 @@ except ImportError:
     id_token = None
     google_requests = None
 
+from django.core.mail import send_mail
 from django.conf import settings
 import random
+
 from .models import OTPVerification   # add to existing models import block
 import logging
 import requests
