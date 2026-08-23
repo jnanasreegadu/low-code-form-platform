@@ -27,10 +27,13 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db.models import Avg, Count, Q
 from django.db.models.functions import TruncDate
-from django.utils.dateparse import parse_datetime
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
-from django.core.mail import send_mail
+try:
+    from google.oauth2 import id_token
+    from google.auth.transport import requests as google_requests
+except ImportError:
+    id_token = None
+    google_requests = None
+
 from django.conf import settings
 import random
 from .models import OTPVerification   # add to existing models import block
