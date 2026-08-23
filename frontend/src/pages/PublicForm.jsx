@@ -166,7 +166,6 @@ function PublicForm() {
   // ==========================================================
 
   const handleSubmit = async () => {
-
     if (!submissionId) {
       alert("Submission not started. Please refresh the form.");
       return;
@@ -174,7 +173,40 @@ function PublicForm() {
 
     setSubmitError("");
 
+    // Validate visible required fields & regex rules
+    if (form && form.fields) {
+      for (const field of form.fields) {
+        if (isFieldHidden(field.id)) continue;
+        const val = responses[field.id];
+        const valStr = val === undefined || val === null ? "" : String(val).trim();
+
+        if ((field.required || field.is_required) && (!val || valStr === "" || (field.type === "checkbox" && val !== true))) {
+          setSubmitError(`"${field.label || "Field"}" is required.`);
+          return;
+        }
+
+        if (field.type === "email" && valStr !== "") {
+          const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+          if (!emailRegex.test(valStr)) {
+            setSubmitError(`Please enter a valid email address for "${field.label}".`);
+            return;
+          }
+        }
+
+        if (field.min_length && valStr.length < field.min_length) {
+          setSubmitError(`"${field.label}" must be at least ${field.min_length} characters long.`);
+          return;
+        }
+
+        if (field.max_length && valStr.length > field.max_length) {
+          setSubmitError(`"${field.label}" cannot exceed ${field.max_length} characters.`);
+          return;
+        }
+      }
+    }
+
     const formData = new FormData();
+
 
     const responseData = Object.keys(responses).map((id) => ({
       field_id: Number(id),
