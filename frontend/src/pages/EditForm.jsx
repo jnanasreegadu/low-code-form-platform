@@ -23,6 +23,7 @@ function EditForm() {
   const [selectedField, setSelectedField] = useState(null);
   const [rules, setRules] = useState([]);
   const [limitOneResponsePerEmail, setLimitOneResponsePerEmail] = useState(false);
+  const [editingField, setEditingField] = useState(null);
 
 
   // ==============================
@@ -238,6 +239,27 @@ function EditForm() {
 
   };
 
+  const removeOption = (fieldId, optionIndex) => {
+    const updatedFields = fields.map((field) => {
+      if (field.id === fieldId) {
+        const newOptions = (field.options || []).filter((_, idx) => idx !== optionIndex);
+        return {
+          ...field,
+          options: newOptions,
+        };
+      }
+      return field;
+    });
+
+    setFields(updatedFields);
+
+    if (selectedField?.id === fieldId) {
+      setSelectedField(
+        updatedFields.find((field) => field.id === fieldId)
+      );
+    }
+  };
+
 
   // ==============================
   // UPDATE LABEL
@@ -443,7 +465,7 @@ function EditForm() {
   
       alert("Form Updated Successfully!");
   
-      navigate("/dashboard");
+      navigate("/forms");
   
     } catch (error) {
       console.error("UPDATE ERROR:", error);
@@ -492,7 +514,7 @@ function EditForm() {
 
       alert("Draft Saved Successfully!");
 
-      navigate("/dashboard");
+      navigate("/forms");
 
     } catch (error) {
 
@@ -518,13 +540,12 @@ function EditForm() {
 
         <button
           className="back-btn"
-          onClick={() => navigate("/dashboard")}
+          onClick={() => navigate("/forms")}
         >
 
           <ArrowLeft size={18} />
 
-          Back
-
+          Back to Forms
         </button>
 
 
@@ -623,29 +644,21 @@ function EditForm() {
           <div className="field-settings-horizontal">
 
             <FieldSettings
-
+              editingField={editingField}
+              setEditingField={setEditingField}
               selectedField={selectedField}
-
+              setSelectedField={setSelectedField}
               fields={fields}
-
               updateLabel={updateLabel}
-
               updatePlaceholder={updatePlaceholder}
-
               updateValidation={updateValidation}
-
               toggleRequired={toggleRequired}
-
               deleteField={deleteField}
-
               updateOptions={updateOptions}
-
               addOption={addOption}
-
+              removeOption={removeOption}
               rules={rules}
-
               setRules={setRules}
-
             />
 
           </div>
@@ -673,21 +686,15 @@ function EditForm() {
       {/* ================= LIVE PREVIEW ================= */}
 
       <PreviewPanel
-
         fields={fields}
-
         handleDragEnd={handleDragEnd}
-
         updateLabel={updateLabel}
-
         deleteField={deleteField}
-
         toggleRequired={toggleRequired}
-
         selectedField={selectedField}
-
         selectField={selectField}
-
+        editingField={editingField}
+        setEditingField={setEditingField}
       />
 
 

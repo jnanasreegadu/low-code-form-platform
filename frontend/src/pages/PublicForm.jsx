@@ -173,19 +173,22 @@ function PublicForm() {
 
     setSubmitError("");
 
-    // Validate visible required fields & regex rules
+    // Validate visible required fields & validation rules
     if (form && form.fields) {
       for (const field of form.fields) {
         if (isFieldHidden(field.id)) continue;
         const val = responses[field.id];
         const valStr = val === undefined || val === null ? "" : String(val).trim();
+        const fType = (field.type || field.field_type || "").toLowerCase();
 
-        if ((field.required || field.is_required) && (!val || valStr === "" || (field.type === "checkbox" && val !== true))) {
+        // 1. Required Validation
+        if ((field.required || field.is_required) && (!val || valStr === "" || (fType === "checkbox" && val !== true))) {
           setSubmitError(`"${field.label || "Field"}" is required.`);
           return;
         }
 
-        if (field.type === "email" && valStr !== "") {
+        // 2. Email Validation
+        if (fType === "email" && valStr !== "") {
           const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
           if (!emailRegex.test(valStr)) {
             setSubmitError(`Please enter a valid email address for "${field.label}".`);
@@ -193,14 +196,64 @@ function PublicForm() {
           }
         }
 
-        if (field.min_length && valStr.length < field.min_length) {
-          setSubmitError(`"${field.label}" must be at least ${field.min_length} characters long.`);
+        // 3. Min Length Validation
+        const minLen = field.min_length ?? field.minLength;
+        if (minLen && valStr !== "" && valStr.length < Number(minLen)) {
+          setSubmitError(`"${field.label}" must be at least ${minLen} characters long.`);
           return;
         }
 
-        if (field.max_length && valStr.length > field.max_length) {
-          setSubmitError(`"${field.label}" cannot exceed ${field.max_length} characters.`);
+        // 4. Max Length Validation
+        const maxLen = field.max_length ?? field.maxLength;
+        if (maxLen && valStr !== "" && valStr.length > Number(maxLen)) {
+          setSubmitError(`"${field.label}" cannot exceed ${maxLen} characters.`);
           return;
+        }
+
+        // 5. Min Value Validation
+        const minVal = field.min_value ?? field.minValue;
+        if (minVal !== undefined && minVal !== null && minVal !== "" && valStr !== "") {
+          if (Number(valStr) < Number(minVal)) {
+            setSubmitError(`"${field.label}" must be at least ${minVal}.`);
+            return;
+          }
+        }
+
+        // 6. Max Value Validation
+        const maxVal = field.max_value ?? field.maxValue;
+        if (maxVal !== undefined && maxVal !== null && maxVal !== "" && valStr !== "") {
+          if (Number(valStr) > Number(maxVal)) {
+            setSubmitError(`"${field.label}" cannot exceed ${maxVal}.`);
+            return;
+          }
+        }
+
+        // 7. Min Date Validation
+        const minDt = field.min_date ?? field.minDate;
+        if (minDt && valStr !== "" && valStr < minDt) {
+          setSubmitError(`"${field.label}" date cannot be earlier than ${minDt}.`);
+          return;
+        }
+
+        // 8. Max Date Validation
+        const maxDt = field.max_date ?? field.maxDate;
+        if (maxDt && valStr !== "" && valStr > maxDt) {
+          setSubmitError(`"${field.label}" date cannot be later than ${maxDt}.`);
+          return;
+        }
+
+        // 9. Custom Regex Pattern Validation
+        const pat = field.pattern ?? field.regex;
+        if (pat && valStr !== "") {
+          try {
+            const regex = new RegExp(pat);
+            if (!regex.test(valStr)) {
+              setSubmitError(`"${field.label}" format is invalid (pattern: ${pat}).`);
+              return;
+            }
+          } catch (e) {
+            console.warn("Invalid regex pattern:", pat);
+          }
         }
       }
     }

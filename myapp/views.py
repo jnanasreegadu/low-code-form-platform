@@ -96,7 +96,11 @@ class FormViewSet(viewsets.ModelViewSet):
             return Form.objects.all()
 
         if not self.request.user.is_authenticated:
-            return Form.objects.none()
+            return Form.objects.all()
+
+        # For authenticated user, claim any unowned forms (owner is null) so forms created
+        # prior to logging in or without auth header are preserved under this account.
+        Form.objects.filter(owner__isnull=True).update(owner=self.request.user)
 
         return Form.objects.filter(owner=self.request.user).order_by("-created_at")
 
@@ -105,11 +109,11 @@ class FormViewSet(viewsets.ModelViewSet):
     def create(self, request):
         data = request.data
         form_title = str(data.get("title", "")).strip() or "Untitled Form"
-
+        owner_user = request.user if request.user.is_authenticated else None
 
         # Create Form
         form = Form.objects.create(
-            owner=request.user,
+            owner=owner_user,
             title=form_title,
             description=data.get("description", ""),
             status=data.get("status", "draft"),
@@ -145,6 +149,7 @@ class FormViewSet(viewsets.ModelViewSet):
                 max_value=item.get("maxValue") or None,
                 min_date=item.get("minDate") or None,
                 max_date=item.get("maxDate") or None,
+                pattern=item.get("pattern") or item.get("regex") or None,
                 field_order=index,
             )
 
@@ -224,6 +229,9 @@ class FormViewSet(viewsets.ModelViewSet):
 
         # Keep JSON copy also updated
         form.Fields = fields_data
+
+        if request.user.is_authenticated and not form.owner:
+            form.owner = request.user
 
         form.save()
 

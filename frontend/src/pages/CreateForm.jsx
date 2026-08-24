@@ -218,6 +218,21 @@ const addOption = (fieldId) => {
       })
     );
 };
+
+const removeOption = (fieldId, optionIndex) => {
+  setFields((prevFields) =>
+    prevFields.map((field) => {
+      if (field.id === fieldId) {
+        const newOptions = (field.options || []).filter((_, idx) => idx !== optionIndex);
+        return {
+          ...field,
+          options: newOptions,
+        };
+      }
+      return field;
+    })
+  );
+};
   const updateLabel = (id, value) => {
     const updatedFields = fields.map((field) =>
       field.id === id
@@ -435,10 +450,10 @@ const addOption = (fieldId) => {
         <header className="create-navbar">
           <button
             className="back-btn"
-            onClick={() => navigate("/dashboard")}
+            onClick={() => navigate("/forms")}
           >
             <ArrowLeft size={16} />
-            Dashboard
+            Forms
           </button>
 
           <div className="nav-publication-bar">
@@ -714,6 +729,8 @@ const addOption = (fieldId) => {
               <FieldSettings
                 editingField={editingField}
                 setEditingField={setEditingField}
+                selectedField={selectedField}
+                setSelectedField={setSelectedField}
                 fields={fields}
                 updateLabel={updateLabel}
                 updatePlaceholder={updatePlaceholder}
@@ -722,6 +739,7 @@ const addOption = (fieldId) => {
                 deleteField={deleteField}
                 updateOptions={updateOptions}
                 addOption={addOption}
+                removeOption={removeOption}
                 rules={rules}
                 setRules={setRules}
               />

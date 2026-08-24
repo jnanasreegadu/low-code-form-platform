@@ -150,9 +150,15 @@ class Field(models.Model):
 )
 
     max_date = models.DateField(
-    null=True,
-    blank=True
-)
+        null=True,
+        blank=True
+    )
+
+    pattern = models.CharField(
+        max_length=255,
+        null=True,
+        blank=True
+    )
 
     field_order = models.IntegerField(default=1)
     created_at = models.DateTimeField(
